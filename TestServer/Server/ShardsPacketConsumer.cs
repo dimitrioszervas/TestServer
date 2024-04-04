@@ -5,6 +5,9 @@ using Newtonsoft.Json;
 using Serilog;
 using System.Text;
 using System.Threading.Tasks.Dataflow;
+using PeterO.Cbor;
+using TestServer.Models.Private;
+using TestServer.Models.Public;
 
 namespace TestServer.Server
 {
@@ -1067,6 +1070,96 @@ namespace TestServer.Server
                 }
             } // end while OutputAvailableAsync()
                             
+            return responses;
+        } // end ConsumeAsync
+
+        public async Task<Dictionary<string, string>> ConsumeAsync(IReceivableSourceBlock<ShardsPacket> source, string requestType)
+        {           
+
+            ulong userId;
+            ulong orgId;
+            ulong deviceId;
+
+            // Stores the received shards and rebuilds a transaction if enough shards are received
+            TransactionShards shards = null;
+
+            // Dictionary/HashMap that stores a list of reponses from multiple requests in a transaction
+            // using the Request string as an index key.
+            Dictionary<string, string> responses = new Dictionary<string, string>();
+
+            int countShards = 0;
+
+            // Wait for input from producer.
+            while (await source.OutputAvailableAsync())
+            {
+                // Get shard packet from producer                 
+                while (source.TryReceive(out ShardsPacket shardsPacket))
+                {
+                    try
+                    {
+                        // For debug reason count number of received shards and print them to console.
+                        countShards++;
+                        _logger.LogInformation($"Received Shard {countShards}");
+
+                        // Initialise a TransactionShards class instance if is null when we receive a shard packet
+                        if (shards == null)
+                        {
+                            shards = new TransactionShards(shardsPacket);
+                        }
+
+                        // Add each shard of the received paket to the TransactionShards class instance for storage
+                        for (int i = 0; i < shardsPacket.MetadataShards.Count; i++)
+                        {
+                            // Set received shard to appropriate position in the shards matrix (see TransactionSgards class).
+                            shards.SetShard(shardsPacket.ShardNo[i], shardsPacket.MetadataShards[i]);
+
+                            // Check if we have enough data shards to rebult the Transaction using Reed-Solomon.
+                            if (shards.AreEnoughShards())
+                            {
+                                // Replicate the other shards using Reeed-Solomom.
+                                shards.RebuildTransactionUsingReedSolomon();
+
+                                // Get rebuilt Transaction bytes.
+                                byte[] shardsBytes = shards.GetRebuiltTransactionBytes();
+
+                                // Convert Transaction's bytes to a Json string
+                                var shardsJsonString = Encoding.UTF8.GetString(shards.GetRebuiltTransactionBytes());
+
+                                // Print the Transaction's Json string to console for debug purposes.
+                                _logger.LogInformation(shardsJsonString);
+
+                                if (requestType.Equals(BaseRequest.Invite))
+                                {
+                                    InviteRequest transactionObj = JsonConvert.DeserializeObject<InviteRequest>(shardsJsonString);
+
+                                    // servers store invite.SIGNS + invite.ENCRYPTS for device.id = invite.id         
+                                    byte[] inviteID = CryptoUtils.CBORBinaryStringToBytes(transactionObj.inviteID);
+                                    KeyStore.Inst.StoreENCRYPTS(inviteID, transactionObj.inviteENCRYPTS);
+                                    KeyStore.Inst.StoreSIGNS(inviteID, transactionObj.inviteSIGNS);
+
+                                    // response is just OK, but any response data must be encrypted + signed using owner.KEYS
+                                    var cbor = CBORObject.NewMap().Add("INVITE", "SUCCESS");
+
+                                    //return Ok(cbor.ToJSONString());
+                                    //return ReturnBytes(cbor.EncodeToBytes());
+                                    responses.Add(BaseRequest.Invite, cbor.ToJSONString());
+                                }                             
+
+                                return responses;
+
+                            } // end if are enough shards
+                        } // end for i
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError($"ConsumeAsync Exception caught: {ex}");
+                        _logger.LogInformation("ConsumeAsync: Transaction failed!");
+                        responses.Clear();
+                        return responses;
+                    }
+                }
+            } // end while OutputAvailableAsync()
+
             return responses;
         } // end ConsumeAsync
     }

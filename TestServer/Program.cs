@@ -52,6 +52,8 @@ namespace TestServer
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
+            builder.Services.AddScoped<IServerService, ServerService>();
+
             // Create a cors policy
             builder.Services.AddCors(options =>
             {

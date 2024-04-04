@@ -5,12 +5,14 @@ using PeterO.Cbor;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Threading.Tasks.Dataflow;
 using TestServer.Contracts;
 using TestServer.Dtos.Server;
 using TestServer.ReedSolomon;
 using TestServer.Server;
 using TestServer.Server.Requests;
+using TestServer.Server.Responses;
 
 
 
@@ -25,7 +27,7 @@ namespace TestServer.Controllers
 
         private readonly ILogger<FilesController> _logger;
         private readonly IMapper _mapper;
-        private readonly IServerService _serverService;
+        //private readonly IServerService _serverService;
 
         static ConcurrentDictionary<Guid, ShardsPacketConsumer> _transactions = new ConcurrentDictionary<Guid, ShardsPacketConsumer>();
 
@@ -35,11 +37,11 @@ namespace TestServer.Controllers
         /// <param name="logger"></param>
         /// <param name="mapper"></param>
         /// <param name="serverService"></param>
-        public TransactionsController(ILogger<FilesController> logger, IMapper mapper, IServerService serverService)
+        public TransactionsController(ILogger<FilesController> logger, IMapper mapper)//, IServerService serverService)
         {
             _logger = logger;
             _mapper = mapper;
-            _serverService = serverService;
+            //_serverService = serverService;
         }
 
 
@@ -92,8 +94,8 @@ namespace TestServer.Controllers
             */
 
             CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
-            /*
-            var shardsPacket = _mapper.Map<ShardsPacket>(shardsPacketDto);
+          
+            var shardsPacket = _mapper.Map<ShardsPacket>(requestCBOR.ToJSONString());
 
             if (_transactions.ContainsKey(shardsPacket.SessionId))
             {
@@ -104,7 +106,7 @@ namespace TestServer.Controllers
                 _transactions.TryAdd(shardsPacket.SessionId, new ShardsPacketConsumer());
                 _transactions[shardsPacket.SessionId].Buffer.Post(shardsPacket);
             }
-            */
+            
             return Ok();
         }
 
@@ -184,50 +186,7 @@ namespace TestServer.Controllers
 
             return result;
         }
-        /*
-                   try
-            {
-                _logger.LogInformation("FilesController CreateFolder");
-
-                var shardsPacket = _mapper.Map<ShardsPacket>(shardsPacketDto);
-
-                if (!_transactions.ContainsKey(shardsPacket.SessionId))
-                {
-                    _transactions.TryAdd(shardsPacket.SessionId, new ShardsPacketConsumer());
-                }
-
-                var consumerTask = _transactions[shardsPacket.SessionId].ConsumeAsync(_transactions[shardsPacket.SessionId].Buffer, _serverService);
-                _transactions[shardsPacket.SessionId].Buffer.Post(shardsPacket);
-                ReplicateMetadataShards(shardsPacket);
-                var results = await consumerTask;
-                ShardsPacketConsumer consumer;
-                _transactions.TryRemove(shardsPacket.SessionId, out consumer);
-
-                if (results.Count == 0)
-                {
-                    return StatusCode(400);
-                }
-
-                var response = (ListFilesResponse)results[BaseRequest.CreateFolder];
-
-                string jsonString = JsonSerializer.Serialize(response);
-
-                byte[] responseBytes = Encoding.UTF8.GetBytes(jsonString);
-
-                _logger.LogInformation($"response: {jsonString}");
-
-                ShardsPacket responseShardPacket = Servers.Instance.GetShardPacket(responseBytes);
-
-                return Ok(responseShardPacket);
-            }
-            catch (Exception ex)
-            {
-
-                _logger.LogError($"Exception caught: {ex}");
-                return StatusCode(400);
-            }
-         */
-
+      
         // Invite endpoint
         [HttpPost]
         [Route("Invite")]
@@ -248,28 +207,47 @@ namespace TestServer.Controllers
 
             //servers receive + validate the invite transaction
 
-            // Decode request's CBOR bytes   
-            byte[] src = new byte[CryptoUtils.SRC_SIZE_8];
-            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref src, false);
+            try
+            {
+                _logger.LogInformation("FilesController CreateFolder");
 
-            Console.WriteLine("Invite:");
-            Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
-            Console.WriteLine();
+                CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
 
-            InviteRequest transactionObj =
-               JsonConvert.DeserializeObject<InviteRequest>(rebuiltDataJSON);
+                var shardsPacket = _mapper.Map<ShardsPacket>(requestCBOR.ToJSONString());
 
-            // servers store invite.SIGNS + invite.ENCRYPTS for device.id = invite.id         
-            byte[] inviteID = CryptoUtils.CBORBinaryStringToBytes(transactionObj.inviteID);
-            KeyStore.Inst.StoreENCRYPTS(inviteID, transactionObj.inviteENCRYPTS);
-            KeyStore.Inst.StoreSIGNS(inviteID, transactionObj.inviteSIGNS);
+                if (!_transactions.ContainsKey(shardsPacket.SessionId))
+                {
+                    _transactions.TryAdd(shardsPacket.SessionId, new ShardsPacketConsumer());
+                }
 
-            // response is just OK, but any response data must be encrypted + signed using owner.KEYS
-            var cbor = CBORObject.NewMap().Add("INVITE", "SUCCESS");
+                var consumerTask = _transactions[shardsPacket.SessionId].ConsumeAsync(_transactions[shardsPacket.SessionId].Buffer, BaseRequest.Invite);
+                _transactions[shardsPacket.SessionId].Buffer.Post(shardsPacket);
+                ReplicateMetadataShards(requestBytes);
+                var results = await consumerTask;
+                ShardsPacketConsumer consumer;
+                _transactions.TryRemove(shardsPacket.SessionId, out consumer);
 
-            //return Ok(cbor.ToJSONString());
-            //return ReturnBytes(cbor.EncodeToBytes());
-            return Ok(cbor.EncodeToBytes());
+                if (results.Count == 0)
+                {
+                    return StatusCode(400);
+                }
+              
+                string jsonString = results[BaseRequest.Invite];
+
+                byte[] responseBytes = Encoding.UTF8.GetBytes(jsonString);
+
+                _logger.LogInformation($"response: {jsonString}");
+
+                ShardsPacket responseShardPacket = Servers.Instance.GetShardPacket(responseBytes);
+
+                return Ok(responseShardPacket);
+            }
+            catch (Exception ex)
+            {
+
+                _logger.LogError($"Exception caught: {ex}");
+                return StatusCode(400);
+            }
         }
 
         // Register endpoint

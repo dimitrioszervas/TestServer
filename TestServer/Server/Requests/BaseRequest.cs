@@ -3,6 +3,11 @@
  
     public class BaseRequest
     {        
+        public const string Invite = "Invite";
+        public const string Register = "Register";
+        public const string Rekey = "Rekey";
+        public const string Session = "Session";
+
         // Files
         public const string CreateFolder = "CreateFolder";
         public const string CreateFile = "CreateFile";
