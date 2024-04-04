@@ -6,7 +6,7 @@ using TestServer.Repositories;
 
 namespace TestServer.Repositories.Public
 {
-    public class OrgsRepository : PublicGenericRepository<Org>, IOrgsRepository
+    public class OrgsRepository : PublicGenericRepository<TestServer.Models.Public.Org>, IOrgsRepository
     {
         public OrgsRepository(PublicDbContext context, IMapper mapper) : base(context, mapper)
         {

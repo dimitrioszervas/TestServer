@@ -34,6 +34,7 @@ namespace TestServer.Server
         /// <returns> Dictionary<BaseRequest, BaseResponse> </returns>
         public async Task<Dictionary<string, BaseResponse>> ConsumeAsync(IReceivableSourceBlock<ShardsPacket> source, IServerService serverService)
         {
+            /*
             UnsignedTransaction<CreateOrgRequest> createOrgTrans = null;
             UnsignedTransaction<RegisterOrgRequest> registerOrgTrans = null;
             UnsignedTransaction<CreateUserAndDeviceRequest> createUserAndDeviceTrans = null;
@@ -92,6 +93,7 @@ namespace TestServer.Server
             UnsignedTransaction<GetAttributeRequest> getAttributeTrans = null;
             UnsignedTransaction<ApprovalRequest> approvalTrans = null;
             UnsignedTransaction<HasUserPermissionRequest> hasUserPermissionTrans = null;
+            */
 
 
             ulong userId;
@@ -99,7 +101,7 @@ namespace TestServer.Server
             ulong deviceId;
 
             // Stores the received shards and rebuilds a transaction if enough shards are received
-            TransactionShards transactionShards = null;
+            TransactionShards shards = null;
 
             // Dictionary/HashMap that stores a list of reponses from multiple requests in a transaction
             // using the Request string as an index key.
@@ -120,36 +122,39 @@ namespace TestServer.Server
                         _logger.LogInformation($"Received Shard {countShards}");
 
                         // Initialise a TransactionShards class instance if is null when we receive a shard packet
-                        if (transactionShards == null)
+                        if (shards == null)
                         {
-                            transactionShards = new TransactionShards(shardsPacket);
+                            shards = new TransactionShards(shardsPacket);
                         }
                         
                         // Add each shard of the received paket to the TransactionShards class instance for storage
                         for (int i = 0; i < shardsPacket.MetadataShards.Count; i++)
                         {
                             // Set received shard to appropriate position in the shards matrix (see TransactionSgards class).
-                            transactionShards.SetShard(shardsPacket.ShardNo[i], shardsPacket.MetadataShards[i]);
+                            shards.SetShard(shardsPacket.ShardNo[i], shardsPacket.MetadataShards[i]);
 
                             // Check if we have enough data shards to rebult the Transaction using Reed-Solomon.
-                            if (transactionShards.AreEnoughShards())
+                            if (shards.AreEnoughShards())
                             {
                                 // Replicate the other shards using Reeed-Solomom.
-                                transactionShards.RebuildTransactionUsingReedSolomon();
+                                shards.RebuildTransactionUsingReedSolomon();
 
                                 // Get rebuilt Transaction bytes.
-                                byte[] transactionBytes = transactionShards.GetRebuiltTransactionBytes();
+                                byte[] shardsBytes = shards.GetRebuiltTransactionBytes();
 
                                 // Convert Transaction's bytes to a Json string
-                                var transactionJsonString = Encoding.UTF8.GetString(transactionShards.GetRebuiltTransactionBytes());
-
+                                var shardsJsonString = Encoding.UTF8.GetString(shards.GetRebuiltTransactionBytes());
+                                                               
                                 // Print the Transaction's Json string to console for debug purposes.
-                                //_logger.LogInformation(transactionJsonString);
+                                _logger.LogInformation(shardsJsonString);
 
+                                BaseRequest baseRequest = JsonConvert.DeserializeObject<BaseRequest>(shardsJsonString);
+
+                                /*
                                 // First we map the SignedTransaction Json string to the generic BaseRequest object (all requests are
                                 // derived from this class) to get the request rTYP (REQ[0].TYP), so later we can map it to
                                 // the appropriate request object to get the rest of the Json request's attribute–value pairs.                                
-                                Transaction transaction = JsonConvert.DeserializeObject<Transaction>(transactionJsonString);
+                                Transaction transaction = JsonConvert.DeserializeObject<Transaction>(shardsJsonString);
 
                                 byte[] unsignedTransactionBytes = transaction.STX.GetUTXBytes();
 
@@ -157,6 +162,7 @@ namespace TestServer.Server
 
                                 _logger.LogInformation(unsignedTransactionJsonString);
 
+                             
                                 UnsignedTransaction<BaseRequest> unsignedTransaction = JsonConvert.DeserializeObject<UnsignedTransaction<BaseRequest>>(unsignedTransactionJsonString);
 
                                 const string VERIFICATION_CODE = "12345";
@@ -1032,18 +1038,19 @@ namespace TestServer.Server
                                 {
 
                                     // Insert to private blockchain
-                                    //Servers.Instance.InsertToPrivateBlockchain(serverService.ULongToHexString(orgId), transactionBytes);
+                                    //Servers.Instance.InsertToPrivateBlockchain(serverService.ULongToHexString(orgId), shardsBytes);
 
                                     // Get current block from private blockchain
                                     //long block = Servers.Instance.GetPrivateBlockchain(serverService.ULongToHexString(orgId)).GetLastBlockNo();
 
                                     // Insert to public blockchain
-                                    //Servers.Instance.InsertToPublicBlockchain(transactionBytes);
+                                    //Servers.Instance.InsertToPublicBlockchain(shardsBytes);
 
                                     // Get current block from public blockchain
                                     //long publicBlockchainBlock = Servers.Instance.GetPublicBlockchain().GetLastBlockNo();
 
                                 }
+                                */
 
                                 return responses;
 

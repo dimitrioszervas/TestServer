@@ -3,7 +3,7 @@ using TestServer.Contracts;
 
 namespace TestServer.Contracts.Public
 {
-    public interface IOrgsRepository : IGenericRepository<Org>
+    public interface IOrgsRepository : IGenericRepository<TestServer.Models.Public.Org>
     {
     }
 }

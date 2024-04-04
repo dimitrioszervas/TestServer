@@ -29,7 +29,7 @@ namespace TestServer.Configurations
 
             // Public DB
             CreateMap<PublicUser, PublicUserDto>().ReverseMap();
-            CreateMap<Org, OrgDto>().ReverseMap();
+            CreateMap<TestServer.Models.Public.Org, OrgDto>().ReverseMap();
             CreateMap<Models.Public.Blockchain, BlockchainDto>().ReverseMap();
             CreateMap<Domain, DomainDto>().ReverseMap();
             CreateMap<Email, EmailDto>().ReverseMap();

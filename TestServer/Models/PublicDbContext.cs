@@ -15,7 +15,7 @@ namespace TestServer.Models
         public DbSet<Domain> Domains { get; set; }
         public DbSet<Email> Emails { get; set; }
         public DbSet<Invite> Invites { get; set; }
-        public DbSet<Org> Orgs { get; set; }
+        public DbSet<TestServer.Models.Public.Org> Orgs { get; set; }
         public DbSet<Seal> Seals { get; set; }
         public DbSet<SealTransaction> SealTransactions { get; set; }
         public DbSet<PublicUser> Users { get; set; }

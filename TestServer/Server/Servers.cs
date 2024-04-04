@@ -3,6 +3,7 @@ using Serilog;
 using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
+using System.Net.Http.Headers;
 
 namespace TestServer.Server
 {
@@ -12,6 +13,8 @@ namespace TestServer.Server
     /// </summary>
     public sealed class Servers
     {
+        public const int NUM_SERVERS = 3;
+
         // Folder used to store uploaded files/versions before uploading them to a cloud (AWS for example) 
         public const string TMP_STORAGE_DIR = "TMP_STORAGE";
 
@@ -25,6 +28,7 @@ namespace TestServer.Server
 
         // Other servers as HTTP clients
         private HttpClient[] HttpClients;
+        private MediaTypeWithQualityHeaderValue Header = new MediaTypeWithQualityHeaderValue("application/octet-stream");
 
         // Private thread safe Dictionary/HashMap that stores the private blockchains using the org GUID they
         // belong as a key/index
@@ -272,9 +276,10 @@ namespace TestServer.Server
             {
                 HttpClients[0] = new()
                 {
-                    BaseAddress = new Uri("http://poc.sealstone:5276"),
+                    BaseAddress = new Uri("http://localhost:5099"),//new Uri("http://poc.sealstone:5276"),
                 };
                 HttpClients[0].Timeout = TimeSpan.FromSeconds(1);
+                HttpClients[0].DefaultRequestHeaders.Accept.Add(Header);
             }
             catch (Exception ex)
             {
@@ -286,9 +291,10 @@ namespace TestServer.Server
             {
                 HttpClients[1] = new()
                 {
-                    BaseAddress = new Uri("http://poc.sealstone:5277"),
+                    BaseAddress = new Uri("http://localhost:5200"), // new Uri("http://poc.sealstone:5277"),
                 };
                 HttpClients[1].Timeout = TimeSpan.FromSeconds(1);
+                HttpClients[1].DefaultRequestHeaders.Accept.Add(Header);
             }
             catch (Exception ex)
             {
@@ -310,9 +316,10 @@ namespace TestServer.Server
             {
                 HttpClients[0] = new()
                 {
-                    BaseAddress = new Uri("http://poc.sealstone:5275"),
+                    BaseAddress = new Uri("http://localhost:5110"),// new Uri("http://poc.sealstone:5275"),
                 };
                 HttpClients[0].Timeout = TimeSpan.FromSeconds(1);
+                HttpClients[0].DefaultRequestHeaders.Accept.Add(Header);
             }
             catch (Exception ex)
             {
@@ -324,9 +331,10 @@ namespace TestServer.Server
             {
                 HttpClients[1] = new()
                 {
-                    BaseAddress = new Uri("http://poc.sealstone:5277"),
+                    BaseAddress = new Uri("http://localhost:5200"), // new Uri("http://poc.sealstone:5277"),
                 };
                 HttpClients[1].Timeout = TimeSpan.FromSeconds(1);
+                HttpClients[1].DefaultRequestHeaders.Accept.Add(Header);
             }
             catch (Exception ex)
             {
@@ -348,9 +356,10 @@ namespace TestServer.Server
             {
                 HttpClients[0] = new()
                 {
-                    BaseAddress = new Uri("http://poc.sealstone:5275"),
+                    BaseAddress = new Uri("http://localhost:5110"),// new Uri("http://poc.sealstone:5275"),
                 };
                 HttpClients[0].Timeout = TimeSpan.FromSeconds(1);
+                HttpClients[0].DefaultRequestHeaders.Accept.Add(Header);
             }
             catch (Exception ex)
             {
@@ -362,9 +371,10 @@ namespace TestServer.Server
             {
                 HttpClients[1] = new()
                 {
-                    BaseAddress = new Uri("http://poc.sealstone:5276"),
+                    BaseAddress = new Uri("http://localhost:5099"),//new Uri("http://poc.sealstone:5276"),
                 };
                 HttpClients[1].Timeout = TimeSpan.FromSeconds(1);
+                HttpClients[1].DefaultRequestHeaders.Accept.Add(Header);
             }
             catch (Exception ex)
             {
@@ -375,6 +385,27 @@ namespace TestServer.Server
             _logger.LogInformation("HttpClients Initialised!");
 
             return true;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="httpClient"></param>
+        /// <param name="bytes"></param>
+        /// <param name="endPoint"></param>
+        private void PostAsync(HttpClient httpClient, byte[] bytes, string endPoint)
+        {
+            Task.Run(async () =>
+            {
+                try
+                {
+                    using HttpResponseMessage response = await httpClient.PostAsync(endPoint, new ByteArrayContent(bytes));
+                }
+                catch (Exception)
+                {
+                    return;
+                }
+            });
         }
 
         /// <summary>
@@ -413,6 +444,14 @@ namespace TestServer.Server
             {
                 PostAsync(client, shardsPacket, endPoint);              
             }   
+        }
+
+        public void ReplicateMetadataShards(byte [] bytes, string endPoint)
+        {
+            foreach (var client in HttpClients)
+            {
+                PostAsync(client, bytes, endPoint);
+            }
         }
 
         /// <summary>
