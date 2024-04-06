@@ -7,12 +7,9 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks.Dataflow;
-using TestServer.Contracts;
-using TestServer.Dtos.Server;
 using TestServer.ReedSolomon;
 using TestServer.Server;
 using TestServer.Server.Requests;
-using TestServer.Server.Responses;
 
 
 
@@ -25,8 +22,8 @@ namespace TestServer.Controllers
     {
         private const string TRANSACTIONS_RECEIVE_SHARD_END_POINT = "api/Transactions/receive-shard";
 
-        private readonly ILogger<FilesController> _logger;
-        private readonly IMapper _mapper;
+        private readonly ILogger<TransactionsController> _logger;
+        //private readonly IMapper _mapper;
         //private readonly IServerService _serverService;
 
         static ConcurrentDictionary<Guid, ShardsPacketConsumer> _transactions = new ConcurrentDictionary<Guid, ShardsPacketConsumer>();
@@ -37,10 +34,10 @@ namespace TestServer.Controllers
         /// <param name="logger"></param>
         /// <param name="mapper"></param>
         /// <param name="serverService"></param>
-        public TransactionsController(ILogger<FilesController> logger, IMapper mapper)//, IServerService serverService)
+        public TransactionsController(ILogger<TransactionsController> logger)//, IMapper mapper)//, IServerService serverService)
         {
             _logger = logger;
-            _mapper = mapper;
+            //_mapper = mapper;
             //_serverService = serverService;
         }
 
@@ -51,15 +48,7 @@ namespace TestServer.Controllers
         /// <param name="shardsPacket"></param>
         //private void ReplicateMetadataShards(ShardsPacket shardsPacket)
         private void ReplicateMetadataShards(byte[] requestBytes)
-        {
-            /*
-            byte[] requestBytes;
-            using (var ms = new MemoryStream())
-            {
-                await Request.Body.CopyToAsync(ms);
-                requestBytes = ms.ToArray();
-            }
-            */
+        {           
             try
             {
                 Servers.Instance.ReplicateMetadataShards(requestBytes, TRANSACTIONS_RECEIVE_SHARD_END_POINT);
@@ -80,22 +69,22 @@ namespace TestServer.Controllers
         [Route("receive-shard")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        //public async Task<ActionResult> ReceiveShardsPacketFromOtherServer([FromBody] ShardsPacketDto shardsPacketDto)
-        public async Task<ActionResult> ReceiveShardsPacketFromOtherServer([FromBody] byte[] requestBytes)
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]      
+        public async Task<ActionResult> ReceiveShardsPacketFromOtherServer()
         {
-            /*
+
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
                 await Request.Body.CopyToAsync(ms);
                 requestBytes = ms.ToArray();
-            }
-            */
+            }            
 
             CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
-          
-            var shardsPacket = _mapper.Map<ShardsPacket>(requestCBOR.ToJSONString());
+
+            var jsonShardPacket = Encoding.UTF8.GetString(requestCBOR[0].GetByteString());
+           
+            var shardsPacket = JsonConvert.DeserializeObject<ShardsPacket>(jsonShardPacket);
 
             if (_transactions.ContainsKey(shardsPacket.SessionId))
             {
@@ -174,15 +163,11 @@ namespace TestServer.Controllers
             return rebuiltDataJSON;
         }
 
-        private static HttpResponseMessage ReturnBytes(byte[] bytes)
+        private static HttpResponseMessage ReturnBytes(byte[] bytes, HttpStatusCode httpStatusCode)
         {
-            HttpResponseMessage result = new HttpResponseMessage(HttpStatusCode.OK);
+            HttpResponseMessage result = new HttpResponseMessage(httpStatusCode);
             result.Content = new ByteArrayContent(bytes);
             result.Content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-
-            Console.WriteLine();
-            Console.WriteLine(bytes.Length);
-            Console.WriteLine(CryptoUtils.ByteArrayToStringDebug(result.Content.ReadAsByteArrayAsync().Result));
 
             return result;
         }
@@ -193,34 +178,35 @@ namespace TestServer.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult> Invite(byte[] requestBytes)
+        public async Task<ActionResult> Invite()
         //public async Task<HttpResponseMessage> Invite()
         {
-            /*
+            
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
                 await Request.Body.CopyToAsync(ms);
                 requestBytes = ms.ToArray();
             }
-            */
-
+           
             //servers receive + validate the invite transaction
-
             try
             {
-                _logger.LogInformation("FilesController CreateFolder");
+                _logger.LogInformation("TransactionsController Invite");
+                Console.WriteLine("TransactionsController Invite");
 
                 CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
-
-                var shardsPacket = _mapper.Map<ShardsPacket>(requestCBOR.ToJSONString());
+                                
+                var jsonShardPacket = Encoding.UTF8.GetString(requestCBOR[0].GetByteString());
+                
+                var shardsPacket = JsonConvert.DeserializeObject<ShardsPacket>(jsonShardPacket);
 
                 if (!_transactions.ContainsKey(shardsPacket.SessionId))
                 {
                     _transactions.TryAdd(shardsPacket.SessionId, new ShardsPacketConsumer());
                 }
 
-                var consumerTask = _transactions[shardsPacket.SessionId].ConsumeAsync(_transactions[shardsPacket.SessionId].Buffer, BaseRequest.Invite);
+                var consumerTask = _transactions[shardsPacket.SessionId].ConsumeAsync(_transactions[shardsPacket.SessionId].Buffer, BaseRequest.Invite, false);
                 _transactions[shardsPacket.SessionId].Buffer.Post(shardsPacket);
                 ReplicateMetadataShards(requestBytes);
                 var results = await consumerTask;
@@ -230,16 +216,16 @@ namespace TestServer.Controllers
                 if (results.Count == 0)
                 {
                     return StatusCode(400);
+                    //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
                 }
               
-                string jsonString = results[BaseRequest.Invite];
-
-                byte[] responseBytes = Encoding.UTF8.GetBytes(jsonString);
-
-                _logger.LogInformation($"response: {jsonString}");
+                byte[] responseBytes = results[BaseRequest.Invite];
 
                 ShardsPacket responseShardPacket = Servers.Instance.GetShardPacket(responseBytes);
 
+                byte[] shardPacketBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(responseShardPacket));
+
+                //return ReturnBytes(shardPacketBytes, HttpStatusCode.OK);
                 return Ok(responseShardPacket);
             }
             catch (Exception ex)
@@ -247,6 +233,7 @@ namespace TestServer.Controllers
 
                 _logger.LogError($"Exception caught: {ex}");
                 return StatusCode(400);
+                //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
             }
         }
 
@@ -258,6 +245,7 @@ namespace TestServer.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> Register()
         {
+
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
@@ -265,39 +253,52 @@ namespace TestServer.Controllers
                 requestBytes = ms.ToArray();
             }
 
-            // Decode request's CBOR bytes   
-            byte[] src = new byte[CryptoUtils.SRC_SIZE_8];
-            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref src, false);
-            Console.WriteLine("Register:");
-            Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
-            Console.WriteLine();
-
-            RegisterRequest transactionObj =
-               JsonConvert.DeserializeObject<RegisterRequest>(rebuiltDataJSON);
-
-            byte[] NONCE = CryptoUtils.CBORBinaryStringToBytes(transactionObj.NONCE);
-            byte[] wTOKEN = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wTOKEN);
-            byte[] deviceID = CryptoUtils.CBORBinaryStringToBytes(transactionObj.deviceID);
-
-            // servers create SE[] = create ECDH key pair        
-            List<byte[]> SE_PUB = new List<byte[]>();
-            List<byte[]> SE_PRIV = new List<byte[]>();
-            for (int n = 0; n <= Servers.NUM_SERVERS; n++)
+            //servers receive + validate the invite transaction
+            try
             {
-                var keyPairECDH = CryptoUtils.CreateECDH();
-                SE_PUB.Add(CryptoUtils.ConverCngKeyBlobToRaw(keyPairECDH.PublicKey));
-                SE_PRIV.Add(keyPairECDH.PrivateKey);
+                _logger.LogInformation("TransactionsController Register");
+                Console.WriteLine("TransactionsController Register");
+
+                CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
+
+                var jsonShardPacket = Encoding.UTF8.GetString(requestCBOR[0].GetByteString());
+
+                var shardsPacket = JsonConvert.DeserializeObject<ShardsPacket>(jsonShardPacket);
+
+                if (!_transactions.ContainsKey(shardsPacket.SessionId))
+                {
+                    _transactions.TryAdd(shardsPacket.SessionId, new ShardsPacketConsumer());
+                }
+
+                var consumerTask = _transactions[shardsPacket.SessionId].ConsumeAsync(_transactions[shardsPacket.SessionId].Buffer, BaseRequest.Register, false);
+                _transactions[shardsPacket.SessionId].Buffer.Post(shardsPacket);
+                ReplicateMetadataShards(requestBytes);
+                var results = await consumerTask;
+                ShardsPacketConsumer consumer;
+                _transactions.TryRemove(shardsPacket.SessionId, out consumer);
+
+                if (results.Count == 0)
+                {
+                    return StatusCode(400);
+                    //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
+                }
+
+                byte[] responseBytes = results[BaseRequest.Register];
+
+                ShardsPacket responseShardPacket = Servers.Instance.GetShardPacket(responseBytes);
+
+                byte[] shardPacketBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(responseShardPacket));
+
+                //return ReturnBytes(shardPacketBytes, HttpStatusCode.OK);
+                return Ok(responseShardPacket);
             }
+            catch (Exception ex)
+            {
 
-            // servers store wTOKEN + NONCE                    
-            KeyStore.Inst.StoreNONCE(deviceID, NONCE);
-            KeyStore.Inst.StoreWTOKEN(deviceID, wTOKEN);
-
-
-            // server response is ok
-            var cbor = CBORObject.NewMap().Add("REGISTER", "SUCCESS");
-
-            return Ok(cbor.EncodeToBytes());
+                _logger.LogError($"Exception caught: {ex}");
+                return StatusCode(400);
+                //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
+            }
         }
 
         // Register endpoint
@@ -308,6 +309,7 @@ namespace TestServer.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> Rekey()
         {
+
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
@@ -315,68 +317,52 @@ namespace TestServer.Controllers
                 requestBytes = ms.ToArray();
             }
 
-            // Decode request's CBOR bytes   
-            byte[] deviceID = new byte[CryptoUtils.SRC_SIZE_8];
-            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref deviceID, false);
-            Console.WriteLine("Rekey:");
-            Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
-            Console.WriteLine();
-
-            RekeyRequest transactionObj =
-               JsonConvert.DeserializeObject<RekeyRequest>(rebuiltDataJSON);
-
-            byte[] DS_PUB = CryptoUtils.CBORBinaryStringToBytes(transactionObj.DS_PUB);
-            byte[] DE_PUB = CryptoUtils.CBORBinaryStringToBytes(transactionObj.DE_PUB);
-            byte[] NONCE = CryptoUtils.CBORBinaryStringToBytes(transactionObj.NONCE);
-
-            // servers create SE[] = create ECDH key pair        
-            List<byte[]> SE_PUB = new List<byte[]>();
-            List<byte[]> SE_PRIV = new List<byte[]>();
-            for (int n = 0; n <= Servers.NUM_SERVERS; n++)
+            //servers receive + validate the invite transaction
+            try
             {
-                var keyPairECDH = CryptoUtils.CreateECDH();
-                SE_PUB.Add(CryptoUtils.ConverCngKeyBlobToRaw(keyPairECDH.PublicKey));
-                SE_PRIV.Add(keyPairECDH.PrivateKey);
-            }
+                _logger.LogInformation("TransactionsController Rekey");
+                Console.WriteLine("TransactionsController Rekey");
 
-            // servers unwrap wKEYS using NONCE + store KEYS
-            List<byte[]> ENCRYPTS = new List<byte[]>();
-            List<byte[]> SIGNS = new List<byte[]>();
-            byte[] oldNONCE = KeyStore.Inst.GetNONCE(deviceID);
-            for (int n = 0; n < CryptoUtils.NUM_SIGNS_OR_ENCRYPTS; n++)
+                CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
+
+                var jsonShardPacket = Encoding.UTF8.GetString(requestCBOR[0].GetByteString());
+
+                var shardsPacket = JsonConvert.DeserializeObject<ShardsPacket>(jsonShardPacket);
+
+                if (!_transactions.ContainsKey(shardsPacket.SessionId))
+                {
+                    _transactions.TryAdd(shardsPacket.SessionId, new ShardsPacketConsumer());
+                }
+
+                var consumerTask = _transactions[shardsPacket.SessionId].ConsumeAsync(_transactions[shardsPacket.SessionId].Buffer, BaseRequest.Rekey, false);
+                _transactions[shardsPacket.SessionId].Buffer.Post(shardsPacket);
+                ReplicateMetadataShards(requestBytes);
+                var results = await consumerTask;
+                ShardsPacketConsumer consumer;
+                _transactions.TryRemove(shardsPacket.SessionId, out consumer);
+
+                if (results.Count == 0)
+                {
+                    return StatusCode(400);
+                    //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
+                }
+
+                byte[] responseBytes = results[BaseRequest.Rekey];
+
+                ShardsPacket responseShardPacket = Servers.Instance.GetShardPacket(responseBytes);
+
+                byte[] shardPacketBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(responseShardPacket));
+
+                //return ReturnBytes(shardPacketBytes, HttpStatusCode.OK);
+                return Ok(responseShardPacket);
+            }
+            catch (Exception ex)
             {
-                byte[] wENCRYPT = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wENCRYPTS[n]);
-                byte[] unwrapENCRYPT = CryptoUtils.Unwrap(wENCRYPT, oldNONCE);
-                ENCRYPTS.Add(unwrapENCRYPT);
 
-                byte[] wSIGN = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wSIGNS[n]);
-                byte[] unwrapSIGN = CryptoUtils.Unwrap(wSIGN, oldNONCE);
-                SIGNS.Add(unwrapSIGN);
-            }
-            KeyStore.Inst.StoreENCRYPTS(deviceID, ENCRYPTS);
-            KeyStore.Inst.StoreSIGNS(deviceID, SIGNS);
-
-            // servers store DS PUB + NONCE
-            KeyStore.Inst.StoreDS_PUB(deviceID, DS_PUB);
-            KeyStore.Inst.StoreNONCE(deviceID, NONCE);
-
-            // servers foreach (n > 0),  store LOGINS[n] = ECDH.derive (SE.PRIV[n], DE.PUB) for device.id
-            List<byte[]> LOGINS = new List<byte[]>();
-            for (int n = 0; n <= Servers.NUM_SERVERS; n++)
-            {
-                byte[] derived = CryptoUtils.ECDHDerive(SE_PRIV[n], DE_PUB);
-                LOGINS.Add(derived);
-            }
-            KeyStore.Inst.StoreLOGINS(deviceID, LOGINS);
-
-            byte[] wTOKEN = KeyStore.Inst.GetWTOKEN(deviceID);
-
-            //  response is wTOKEN, SE.PUB[] 
-            var cbor = CBORObject.NewMap()
-                .Add("wTOKEN", wTOKEN)
-                .Add("SE_PUB", SE_PUB);
-
-            return Ok(cbor.EncodeToBytes());
+                _logger.LogError($"Exception caught: {ex}");
+                return StatusCode(400);
+                //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
+            }         
         }
 
 
@@ -388,6 +374,7 @@ namespace TestServer.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> Login()
         {
+
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
@@ -395,45 +382,52 @@ namespace TestServer.Controllers
                 requestBytes = ms.ToArray();
             }
 
-            // Decode request's CBOR bytes
-            // servers receive + validate the login transaction
-            byte[] deviceID = new byte[CryptoUtils.SRC_SIZE_8];
-            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref deviceID, true);
-            Console.WriteLine("Login");
-            Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
-            Console.WriteLine();
-
-            LoginRequest transactionObj =
-               JsonConvert.DeserializeObject<LoginRequest>(rebuiltDataJSON);
-
-            // servers get LOGINS[] for device
-            // servers SIGNS[] = ENCRYPTS[] = LOGINS[]                
-            List<byte[]> LOGINS = KeyStore.Inst.GetLOGINS(deviceID);
-
-            // servers unwrap + store wSIGNS + wENCRPTS using stored NONCE for device.
-            List<byte[]> ENCRYPTS = new List<byte[]>();
-            List<byte[]> SIGNS = new List<byte[]>();
-            byte[] NONCE = CryptoUtils.CBORBinaryStringToBytes(transactionObj.NONCE);// KeyStore.Inst.GetNONCE(deviceID);
-            for (int n = 0; n < CryptoUtils.NUM_SIGNS_OR_ENCRYPTS; n++)
+            //servers receive + validate the invite transaction
+            try
             {
-                byte[] wENCRYPT = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wENCRYPTS[n]);
-                byte[] unwrapENCRYPT = CryptoUtils.Unwrap(wENCRYPT, NONCE);
-                ENCRYPTS.Add(unwrapENCRYPT);
+                _logger.LogInformation("TransactionsController Login");
+                Console.WriteLine("TransactionsController Login");
 
-                byte[] wSIGN = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wSIGNS[n]);
-                byte[] unwrapSIGN = CryptoUtils.Unwrap(wSIGN, NONCE);
-                SIGNS.Add(unwrapSIGN);
+                CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
+
+                var jsonShardPacket = Encoding.UTF8.GetString(requestCBOR[0].GetByteString());
+
+                var shardsPacket = JsonConvert.DeserializeObject<ShardsPacket>(jsonShardPacket);
+
+                if (!_transactions.ContainsKey(shardsPacket.SessionId))
+                {
+                    _transactions.TryAdd(shardsPacket.SessionId, new ShardsPacketConsumer());
+                }
+
+                var consumerTask = _transactions[shardsPacket.SessionId].ConsumeAsync(_transactions[shardsPacket.SessionId].Buffer, BaseRequest.Login, true);
+                _transactions[shardsPacket.SessionId].Buffer.Post(shardsPacket);
+                ReplicateMetadataShards(requestBytes);
+                var results = await consumerTask;
+                ShardsPacketConsumer consumer;
+                _transactions.TryRemove(shardsPacket.SessionId, out consumer);
+
+                if (results.Count == 0)
+                {
+                    return StatusCode(400);
+                    //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
+                }
+
+                byte[] responseBytes = results[BaseRequest.Login];
+
+                ShardsPacket responseShardPacket = Servers.Instance.GetShardPacket(responseBytes);
+
+                byte[] shardPacketBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(responseShardPacket));
+
+                //return ReturnBytes(shardPacketBytes, HttpStatusCode.OK);
+                return Ok(responseShardPacket);
             }
-            KeyStore.Inst.StoreENCRYPTS(deviceID, ENCRYPTS);
-            KeyStore.Inst.StoreSIGNS(deviceID, SIGNS);
+            catch (Exception ex)
+            {
 
-            // servers store NONCE? 
-            // KeyStore.Inst.StoreNONCE(deviceID, CryptoUtils.CBORBinaryStringToBytes(transactionObj.NONCE)); 
-
-            // servers response = wTOKEN   
-            var cbor = CBORObject.NewMap().Add("wTOKEN", KeyStore.Inst.GetWTOKEN(deviceID));
-
-            return Ok(cbor.EncodeToBytes());
+                _logger.LogError($"Exception caught: {ex}");
+                return StatusCode(400);
+                //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
+            }         
         }
 
         // Session endpoint
@@ -444,6 +438,7 @@ namespace TestServer.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> Session()
         {
+
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
@@ -451,22 +446,53 @@ namespace TestServer.Controllers
                 requestBytes = ms.ToArray();
             }
 
-            // Decode request's CBOR bytes
-            // servers receive + validate the login transaction
-            byte[] deviceID = new byte[CryptoUtils.SRC_SIZE_8];
-            string rebuiltDataJSON = GetTransactionFromCBOR(requestBytes, ref deviceID, false);
-            Console.WriteLine("Session");
-            Console.WriteLine($"Rebuilt Data: {rebuiltDataJSON} ");
-            Console.WriteLine();
+            //servers receive + validate the invite transaction
+            try
+            {
+                _logger.LogInformation("TransactionsController Session");
+                Console.WriteLine("TransactionsController Session");
 
-            SessionRequest transactionObj =
-               JsonConvert.DeserializeObject<SessionRequest>(rebuiltDataJSON);
+                CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
 
+                var jsonShardPacket = Encoding.UTF8.GetString(requestCBOR[0].GetByteString());
 
-            // servers response = Ok   
-            var cbor = CBORObject.NewMap().Add("MSG", transactionObj.MSG);
+                var shardsPacket = JsonConvert.DeserializeObject<ShardsPacket>(jsonShardPacket);
 
-            return Ok(cbor.EncodeToBytes());
+                if (!_transactions.ContainsKey(shardsPacket.SessionId))
+                {
+                    _transactions.TryAdd(shardsPacket.SessionId, new ShardsPacketConsumer());
+                }
+
+                var consumerTask = _transactions[shardsPacket.SessionId].ConsumeAsync(_transactions[shardsPacket.SessionId].Buffer, BaseRequest.Session, false);
+                _transactions[shardsPacket.SessionId].Buffer.Post(shardsPacket);
+                ReplicateMetadataShards(requestBytes);
+                var results = await consumerTask;
+                ShardsPacketConsumer consumer;
+                _transactions.TryRemove(shardsPacket.SessionId, out consumer);
+
+                if (results.Count == 0)
+                {
+                    return StatusCode(400);
+                    //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
+                }
+
+                byte[] responseBytes = results[BaseRequest.Session];
+
+                ShardsPacket responseShardPacket = Servers.Instance.GetShardPacket(responseBytes);
+
+                byte[] shardPacketBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(responseShardPacket));
+
+                //return ReturnBytes(shardPacketBytes, HttpStatusCode.OK);
+                return Ok(responseShardPacket);
+            }
+            catch (Exception ex)
+            {
+
+                _logger.LogError($"Exception caught: {ex}");
+                return StatusCode(400);
+                //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
+            }
+         
         }
     }
 }

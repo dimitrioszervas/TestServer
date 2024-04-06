@@ -1,15 +1,4 @@
-using TestServer.Configurations;
-using TestServer.Contracts;
-using TestServer.Contracts.Private;
-using TestServer.Contracts.Public;
-using TestServer.Models;
-using TestServer.Repositories;
-using TestServer.Repositories.Private;
-using TestServer.Repositories.Public;
 using TestServer.Server;
-using TestServer.Services;
-using Microsoft.EntityFrameworkCore;
-using Serilog;
 
 /*
 No need to do migrations you use the TestServer's migrations
@@ -60,6 +49,7 @@ namespace Server3
 
 
             CryptoUtils.GenerateOwnerKeys();
+            Servers.Instance.LoadSettings1();
 
             app.Run();
 

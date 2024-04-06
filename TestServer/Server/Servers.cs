@@ -399,52 +399,18 @@ namespace TestServer.Server
             {
                 try
                 {
-                    using HttpResponseMessage response = await httpClient.PostAsync(endPoint, new ByteArrayContent(bytes));
+                    using (var content = new ByteArrayContent(bytes))
+                    {
+                        content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+                        using HttpResponseMessage response = await httpClient.PostAsync(endPoint, content);
+                    }
                 }
                 catch (Exception)
                 {
                     return;
                 }
             });
-        }
-
-        /// <summary>
-        /// Makes and asynchronous Post request. 
-        /// </summary>
-        /// <param name="httpClient"></param>
-        /// <param name="shardsPacket"></param>
-        /// <param name="endPoint"></param>
-        private void PostAsync(HttpClient httpClient, ShardsPacket shardsPacket, string endPoint)
-        {
-            Task.Run(async () =>
-            {
-                try { 
-                    using StringContent jsonContent = new(
-                        JsonSerializer.Serialize(shardsPacket),
-                        Encoding.UTF8,
-                        "application/json");
-                                   
-                    using HttpResponseMessage response = await httpClient.PostAsync(endPoint, jsonContent);               
-                }
-                catch (Exception)
-                {
-                    return;
-                }
-            });
-        }
-
-        /// <summary>
-        /// Replicates metadata shards (sends shards to the other servers).
-        /// </summary>
-        /// <param name="shardsPacket"></param>
-        /// <param name="endPoint"></param>
-        public void ReplicateMetadataShards(ShardsPacket shardsPacket, string endPoint)
-        {          
-            foreach (var client in HttpClients)
-            {
-                PostAsync(client, shardsPacket, endPoint);              
-            }   
-        }
+        }            
 
         public void ReplicateMetadataShards(byte [] bytes, string endPoint)
         {

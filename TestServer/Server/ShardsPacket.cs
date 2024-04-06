@@ -14,7 +14,8 @@ namespace TestServer.Server
         public int DataShardLength { get; set; }
         public List<byte[]> MetadataShards { get; set; } = new List<byte[]>(); 
         public List<byte[]> DataShards { get; set; } = new List<byte[]>();
-
+        public byte[] SRC { get; set; } = new byte[CryptoUtils.SRC_SIZE_8];
+        public byte[] hmacResult { get; set; }
         public void AddMetadataShard(byte[] metadataShard)
         {          
             MetadataShards.Add(metadataShard);
