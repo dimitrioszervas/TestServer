@@ -23,7 +23,7 @@ namespace TestServer.Controllers
         //private readonly IServerService _serverService;
 
         static ConcurrentDictionary<Guid, ShardsPacketConsumer> _transactions = new ConcurrentDictionary<Guid, ShardsPacketConsumer>();
-               
+
         public TransactionsController(ILogger<TransactionsController> logger)//, IMapper mapper)//, IServerService serverService)
         {
             _logger = logger;
@@ -262,7 +262,7 @@ namespace TestServer.Controllers
 
                 if (results.Count == 0)
                 {
-                    return StatusCode(400);                   
+                    return StatusCode(400);
                 }
 
                 byte[] responseBytes = results[BaseRequest.Rekey];
