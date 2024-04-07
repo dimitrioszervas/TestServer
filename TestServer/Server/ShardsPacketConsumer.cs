@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using Serilog;
 using System.Threading.Tasks.Dataflow;
 using PeterO.Cbor;
+using System.Text;
 
 namespace TestServer.Server
 {
@@ -201,7 +202,7 @@ namespace TestServer.Server
                                                 .Add("wTOKEN", wTOKEN)
                                                 .Add("SE_PUB", SE_PUB);
 
-                                            responses.Add(BaseRequest.Rekey, cborRekeyResponse.EncodeToBytes());
+                                            responses.Add(BaseRequest.Rekey, Encoding.UTF8.GetBytes(cborRekeyResponse.ToJSONString()));
                                         }
                                         break;
                                     case BaseRequest.Login:

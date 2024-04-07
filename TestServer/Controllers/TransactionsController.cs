@@ -262,15 +262,20 @@ namespace TestServer.Controllers
 
                 if (results.Count == 0)
                 {
-                    return StatusCode(400);
-                    //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
+                    return StatusCode(400);                   
                 }
 
                 byte[] responseBytes = results[BaseRequest.Rekey];
 
+                Console.WriteLine($"Size: {responseBytes.Length}");
+                Console.WriteLine(CryptoUtils.ByteArrayToStringDebug(responseBytes));
+
                 ShardsPacket responseShardPacket = Servers.Instance.GetShardPacket(responseBytes);
 
-                byte[] shardPacketBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(responseShardPacket));
+                //var responseCBOR = CBORObject.DecodeFromBytes(responseBytes);
+                //Console.WriteLine(responseCBOR.ToJSONString());
+
+                //byte[] shardPacketBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(responseShardPacket));
 
                 //return ReturnBytes(shardPacketBytes, HttpStatusCode.OK);
                 return Ok(responseShardPacket);
