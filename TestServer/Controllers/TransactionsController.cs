@@ -23,13 +23,7 @@ namespace TestServer.Controllers
         //private readonly IServerService _serverService;
 
         static ConcurrentDictionary<Guid, ShardsPacketConsumer> _transactions = new ConcurrentDictionary<Guid, ShardsPacketConsumer>();
-
-        /// <summary>
-        /// Constructor.
-        /// </summary>
-        /// <param name="logger"></param>
-        /// <param name="mapper"></param>
-        /// <param name="serverService"></param>
+               
         public TransactionsController(ILogger<TransactionsController> logger)//, IMapper mapper)//, IServerService serverService)
         {
             _logger = logger;
@@ -38,11 +32,6 @@ namespace TestServer.Controllers
         }
 
 
-        /// <summary>
-        /// Replicates received metadata shards (sends shards to the other servers).
-        /// </summary>
-        /// <param name="shardsPacket"></param>
-        //private void ReplicateMetadataShards(ShardsPacket shardsPacket)
         private void ReplicateMetadataShards(byte[] requestBytes)
         {
             try
