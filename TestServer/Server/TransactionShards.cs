@@ -41,17 +41,13 @@ namespace TestServer.Server
                 this.reconstructed = false;
               
                 this.shards = new byte[shardPacket.NumTotalShards][];
-                for (var row = 0; row < shardPacket.NumTotalShards; row++)
-                {
-                    this.shards[row] = new byte[shardPacket.MetadataShardLength];
-                }
+               
                 this.shardsPresent = new bool[shardPacket.NumTotalShards];
 
                 this.nDataShards = shardPacket.NumDataShards;
                 this.nParityShards = shardPacket.NumParityShards;
                 this.nTotalShards = shardPacket.NumTotalShards;
-                this.shardLength = shardPacket.MetadataShardLength;
-
+             
                 this.timestamp = DateTimeOffset.Now.ToUnixTimeMilliseconds();
             }
             catch (Exception ex)
@@ -114,18 +110,33 @@ namespace TestServer.Server
             return this.nReceivedShards;
         }
 
-        /// <summary>
-        /// Set a shard to its corresponding index in the shards matrix. 
-        /// </summary>
-        /// <param name="shardNo"></param>
-        /// <param name="shardIn"></param>
-        public void SetShard(int shardNo, byte[] shardIn)
+      
+        public void SetShard(int shardNo, byte[] encryptedShard, byte[] src, byte [] hmacResult, bool useLogins)
         {
             try
             {
-                Array.Copy(shardIn, 0, this.shards[shardNo], 0, this.shardLength);
-                this.shardsPresent[shardNo] = true;
-                this.nReceivedShards++;
+                if (!this.shardsPresent[shardNo])
+                {
+                    int numShards = nTotalShards;
+                    int numShardsPerServer = numShards / Servers.NUM_SERVERS;
+                    int keyIndex = (shardNo / numShardsPerServer) + 1;
+
+                    List<byte[]> encrypts = !useLogins ? KeyStore.Inst.GetENCRYPTS(src) : KeyStore.Inst.GetLOGINS(src);
+
+                    // decrypt shard                
+                    byte[] shard = CryptoUtils.Decrypt(encryptedShard, encrypts[keyIndex], src);
+
+                    List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(src) : KeyStore.Inst.GetLOGINS(src);
+                    bool verified = CryptoUtils.HashIsValid(signs[keyIndex], shard, hmacResult);
+                    Console.WriteLine($"Shard No {shardNo} Verified: {verified}");
+
+                    this.shards[shardNo] = new byte[shard.Length];
+                    Array.Copy(shard, this.shards[shardNo], shard.Length);
+                    this.shardsPresent[shardNo] = true;
+                    this.nReceivedShards++;
+
+                    this.shardLength = shard.Length;
+                }
             }
             catch (Exception ex)
             {
@@ -202,18 +213,27 @@ namespace TestServer.Server
         {
             try
             {
+                // allocated memory for the missing shards
+                for (int i = 0; i < shards.Length; i++)
+                {
+                    if (shards[i] == null)
+                    {
+                        shards[i] = new byte[shardLength];
+                    }
+                }
+
                 // Replicate the other shards using Reeed-Solomom.
                 var reedSolomon = new ReedSolomon.ReedSolomon(this.shardsPresent.Length - this.nParityShards, this.nParityShards);
-                reedSolomon.DecodeMissing(this.shards, this.shardsPresent, 0, this.shardLength);
+                reedSolomon.DecodeMissing(this.shards, this.shardsPresent, 0, shardLength);
 
                 // Write the Reed-Solomon matrix of shards to a 1D array of bytes
-                byte [] buffer = new byte[this.shards.Length * this.shardLength];
+                byte [] buffer = new byte[this.shards.Length * shardLength];
                 int offSet = 0;
 
                 for (int j = 0; j < this.shards.Length - this.nParityShards; j++)
                 {
-                    Array.Copy(this.shards[j], 0, buffer, offSet, this.shardLength);
-                    offSet += this.shardLength;
+                    Array.Copy(this.shards[j], 0, buffer, offSet, shardLength);
+                    offSet += shardLength;
                 }
 
                 // Remove padding

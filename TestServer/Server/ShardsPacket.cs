@@ -12,21 +12,23 @@ namespace TestServer.Server
         public int NumParityShards { get; set; }
         public int MetadataShardLength { get; set; }
         public int DataShardLength { get; set; }
-        public List<byte[]> MetadataShards { get; set; } = new List<byte[]>(); 
+        public List<byte[]> MetadataShards { get; set; } = new List<byte[]>();
         public List<byte[]> DataShards { get; set; } = new List<byte[]>();
+        public byte[] SRC { get; set; }
+        public byte[] hmacResult { get; set; }
 
         public void AddMetadataShard(byte[] metadataShard)
-        {          
+        {
             MetadataShards.Add(metadataShard);
         }
 
         public void AddDataShard(byte[] dataShard)
-        {          
+        {
             DataShards.Add(dataShard);
         }
 
         public void AddShardNo(int shardNo)
-        {         
+        {
             ShardNo.Add(shardNo);
         }
     }
