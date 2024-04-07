@@ -49,7 +49,7 @@ namespace Server3
 
 
             CryptoUtils.GenerateOwnerKeys();
-            Servers.Instance.LoadSettings1();
+            Servers.Instance.LoadSettings3();
 
             app.Run();
 

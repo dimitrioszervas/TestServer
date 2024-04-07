@@ -110,12 +110,8 @@ namespace TestServer.Server
             return this.nReceivedShards;
         }
 
-        /// <summary>
-        /// Set a shard to its corresponding index in the shards matrix. 
-        /// </summary>
-        /// <param name="shardNo"></param>
-        /// <param name="shardIn"></param>
-        public void SetShard(int shardNo, byte[] encryptedShard, byte[] src, bool useLogins)
+      
+        public void SetShard(int shardNo, byte[] encryptedShard, byte[] src, byte [] hmacResult, bool useLogins)
         {
             try
             {
@@ -123,13 +119,16 @@ namespace TestServer.Server
                 {
                     int numShards = nTotalShards;
                     int numShardsPerServer = numShards / Servers.NUM_SERVERS;
+                    int keyIndex = (shardNo / numShardsPerServer) + 1;
 
                     List<byte[]> encrypts = !useLogins ? KeyStore.Inst.GetENCRYPTS(src) : KeyStore.Inst.GetLOGINS(src);
 
-                    int encryptsIndex = (shardNo / numShardsPerServer) + 1;
-
                     // decrypt shard                
-                    byte[] shard = CryptoUtils.Decrypt(encryptedShard, encrypts[encryptsIndex], src);
+                    byte[] shard = CryptoUtils.Decrypt(encryptedShard, encrypts[keyIndex], src);
+
+                    List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(src) : KeyStore.Inst.GetLOGINS(src);
+                    bool verified = CryptoUtils.HashIsValid(signs[keyIndex], shard, hmacResult);
+                    Console.WriteLine($"Shard No {shardNo} Verified: {verified}");
 
                     this.shards[shardNo] = new byte[shard.Length];
                     Array.Copy(shard, this.shards[shardNo], shard.Length);

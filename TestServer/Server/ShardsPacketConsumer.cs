@@ -1,10 +1,8 @@
 ﻿using TestServer.Server.Requests;
 using Newtonsoft.Json;
 using Serilog;
-using System.Text;
 using System.Threading.Tasks.Dataflow;
 using PeterO.Cbor;
-using Amazon.Runtime.Internal.Transform;
 
 namespace TestServer.Server
 {
@@ -62,15 +60,10 @@ namespace TestServer.Server
                         // Add each shard of the received paket to the TransactionShards class instance for storage
                         for (int i = 0; i < shardsPacket.MetadataShards.Count; i++)
                         {
-                            //List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(shardsPacket.SRC) : KeyStore.Inst.GetLOGINS(shardsPacket.SRC);
-
-                            //bool verified = CryptoUtils.HashIsValid(signs[shardsPacket.ShardNo[i]], shardsPacket.MetadataShards[i], shardsPacket.hmacResult);
-
-                            //Console.WriteLine($"Shard No {shardsPacket.ShardNo[i]} Verified: {verified}");
-
+ 
                             // Set received shard to appropriate position in the shards matrix (see TransactionSgards class).
 
-                            shards.SetShard(shardsPacket.ShardNo[i], shardsPacket.MetadataShards[i], shardsPacket.SRC, useLogins);
+                            shards.SetShard(shardsPacket.ShardNo[i], shardsPacket.MetadataShards[i], shardsPacket.SRC, shardsPacket.hmacResult, useLogins);
 
                             // Check if we have enough data shards to rebult the Transaction using Reed-Solomon.
                             if (shards.AreEnoughShards())
@@ -83,9 +76,9 @@ namespace TestServer.Server
 
                                 //var cbor = CBORObject.NewArray().Add(shardsBytes).Add(shardsPacket.SRC);
 
-                                //List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(shardsPacket.SRC) : KeyStore.Inst.GetLOGINS(shardsPacket.SRC);
+                                // List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(shardsPacket.SRC) : KeyStore.Inst.GetLOGINS(shardsPacket.SRC);
 
-                                //bool verified = CryptoUtils.HashIsValid(signs[0], cbor.EncodeToBytes(), shardsPacket.hmacResult);
+                                // bool verified = CryptoUtils.HashIsValid(signs[0], cbor.EncodeToBytes(), shardsPacket.hmacResult);
 
                                 //Console.WriteLine($"Shard Verified: {verified}");
 
@@ -101,6 +94,7 @@ namespace TestServer.Server
                                 switch (requestType) {
                                     case BaseRequest.Invite:
                                         {
+                                            //servers receive + validate the invite transaction
 
                                             InviteRequest inviteObj = JsonConvert.DeserializeObject<InviteRequest>(shardsJsonString);
 
@@ -118,6 +112,8 @@ namespace TestServer.Server
 
                                     case BaseRequest.Register:
                                         {
+                                            // servers receive + validate the register transaction
+
                                             RegisterRequest registerObj = JsonConvert.DeserializeObject<RegisterRequest>(shardsJsonString);
 
                                             byte[] NONCE = CryptoUtils.CBORBinaryStringToBytes(registerObj.NONCE);
@@ -148,6 +144,8 @@ namespace TestServer.Server
 
                                     case BaseRequest.Rekey:
                                         {
+                                            // servers receive + validate the Rekey transaction
+
                                             RekeyRequest rekeyObj = JsonConvert.DeserializeObject<RekeyRequest>(shardsJsonString);
 
                                             byte[] DS_PUB = CryptoUtils.CBORBinaryStringToBytes(rekeyObj.DS_PUB);
@@ -208,6 +206,8 @@ namespace TestServer.Server
                                         break;
                                     case BaseRequest.Login:
                                         {
+                                            // servers receive + validate the Login transaction
+
                                             LoginRequest transactionObj =
                                                 JsonConvert.DeserializeObject<LoginRequest>(shardsJsonString);
 
@@ -245,6 +245,8 @@ namespace TestServer.Server
                                         break;
                                     case BaseRequest.Session:
                                         {
+                                            // servers receive + validate the Session transaction
+
                                             SessionRequest transactionObj = JsonConvert.DeserializeObject<SessionRequest>(shardsJsonString);
 
 

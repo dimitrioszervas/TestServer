@@ -66,15 +66,7 @@ namespace TestServer
 
             app.UseAuthorization();
 
-            app.MapControllers();
-
-            Servers.Instance.ImportOrgBlockchains();
-            Servers.Instance.CreateRequiredFolders();
-
-            if (!Servers.Instance.LoadSettings())
-            {
-                Console.WriteLine("can't found settings file!");
-            }
+            app.MapControllers();         
 
             app.Run();
         }

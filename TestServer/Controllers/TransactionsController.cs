@@ -1,5 +1,4 @@
-﻿using AutoMapper;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using PeterO.Cbor;
 using System.Collections.Concurrent;
@@ -7,11 +6,8 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks.Dataflow;
-using TestServer.ReedSolomon;
 using TestServer.Server;
 using TestServer.Server.Requests;
-
-
 
 namespace TestServer.Controllers
 {
@@ -48,7 +44,7 @@ namespace TestServer.Controllers
         /// <param name="shardsPacket"></param>
         //private void ReplicateMetadataShards(ShardsPacket shardsPacket)
         private void ReplicateMetadataShards(byte[] requestBytes)
-        {           
+        {
             try
             {
                 Servers.Instance.ReplicateMetadataShards(requestBytes, TRANSACTIONS_RECEIVE_SHARD_END_POINT);
@@ -69,7 +65,7 @@ namespace TestServer.Controllers
         [Route("receive-shard")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]      
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> ReceiveShardsPacketFromOtherServer()
         {
 
@@ -78,12 +74,12 @@ namespace TestServer.Controllers
             {
                 await Request.Body.CopyToAsync(ms);
                 requestBytes = ms.ToArray();
-            }            
+            }
 
             CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
 
             var jsonShardPacket = Encoding.UTF8.GetString(requestCBOR[0].GetByteString());
-           
+
             var shardsPacket = JsonConvert.DeserializeObject<ShardsPacket>(jsonShardPacket);
 
             if (_transactions.ContainsKey(shardsPacket.SessionId))
@@ -95,72 +91,8 @@ namespace TestServer.Controllers
                 _transactions.TryAdd(shardsPacket.SessionId, new ShardsPacketConsumer());
                 _transactions[shardsPacket.SessionId].Buffer.Post(shardsPacket);
             }
-            
+
             return Ok();
-        }
-
-        // Extracts the shards from the JSON string an puts the to a 2D byte array (matrix)
-        // needed for rebuilding the data using Reed-Solomon.
-        private static byte[][] GetShardsFromCBOR(byte[] shardsCBORBytes, ref byte[] src, bool useLogins)
-        {
-            CBORObject shardsCBOR = CBORObject.DecodeFromBytes(shardsCBORBytes);
-
-            // allocate memory for the data shards byte matrix
-            // Last element in the string array is not a shard but the loginID array 
-            int numShards = shardsCBOR.Values.Count - 1;
-            int numShardsPerServer = numShards / Servers.NUM_SERVERS;
-
-            src = shardsCBOR[shardsCBOR.Values.Count - 1].GetByteString();
-
-            List<byte[]> encrypts = !useLogins ? KeyStore.Inst.GetENCRYPTS(src) : KeyStore.Inst.GetLOGINS(src);
-
-            byte[][] dataShards = new byte[numShards][];
-            for (int i = 0; i < numShards; i++)
-            {
-                // we start inviteENCRYPTS[1] we don't use inviteENCRYPTS[0]
-                // we may have more than on shard per server 
-                int encryptsIndex = i / numShardsPerServer + 1;
-
-                byte[] encryptedShard = shardsCBOR[i].GetByteString();
-
-                // decrypt string array                
-                byte[] shardBytes = CryptoUtils.Decrypt(encryptedShard, encrypts[encryptsIndex], src);
-
-                //Console.WriteLine($"Encrypts Index: {encryptsIndex}");
-
-                // copy shard to shard matrix
-                dataShards[i] = new byte[shardBytes.Length];
-                Array.Copy(shardBytes, dataShards[i], shardBytes.Length);
-            }
-
-            return dataShards;
-        }
-
-        public static string GetTransactionFromCBOR(byte[] requestBytes, ref byte[] src, bool useLogins)
-        {
-            // Decode request's CBOR bytes  
-            CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
-
-            byte[] transanctionShardsCBORBytes = requestCBOR[0].GetByteString();
-            byte[] hmacResultBytes = requestCBOR[1].GetByteString();
-
-            byte[][] transactionShards = GetShardsFromCBOR(transanctionShardsCBORBytes, ref src, useLogins);
-
-            List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(src) : KeyStore.Inst.GetLOGINS(src);
-
-            bool verified = CryptoUtils.HashIsValid(signs[0], transanctionShardsCBORBytes, hmacResultBytes);
-
-            Console.WriteLine($"CBOR Shard Data Verified: {verified}");
-
-            // Extract the shards from shards CBOR and put them in byte matrix (2D array of bytes).
-
-            byte[] cborTransactionBytes = ReedSolomonUtils.RebuildDataUsingReeedSolomon(transactionShards);
-
-            CBORObject rebuiltTransactionCBOR = CBORObject.DecodeFromBytes(cborTransactionBytes);
-
-            string rebuiltDataJSON = rebuiltTransactionCBOR.ToJSONString();
-
-            return rebuiltDataJSON;
         }
 
         private static HttpResponseMessage ReturnBytes(byte[] bytes, HttpStatusCode httpStatusCode)
@@ -168,37 +100,36 @@ namespace TestServer.Controllers
             HttpResponseMessage result = new HttpResponseMessage(httpStatusCode);
             result.Content = new ByteArrayContent(bytes);
             result.Content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-
             return result;
         }
-      
+
         // Invite endpoint
         [HttpPost]
         [Route("Invite")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult> Invite()
         //public async Task<HttpResponseMessage> Invite()
+        public async Task<ActionResult> Invite()
         {
-            
+
+            Console.WriteLine("TransactionsController Invite");
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
                 await Request.Body.CopyToAsync(ms);
                 requestBytes = ms.ToArray();
             }
-           
-            //servers receive + validate the invite transaction
+
+            // servers receive + validate the invite transaction
             try
             {
                 _logger.LogInformation("TransactionsController Invite");
-                Console.WriteLine("TransactionsController Invite");
 
                 CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
-                                
+
                 var jsonShardPacket = Encoding.UTF8.GetString(requestCBOR[0].GetByteString());
-                
+
                 var shardsPacket = JsonConvert.DeserializeObject<ShardsPacket>(jsonShardPacket);
 
                 if (!_transactions.ContainsKey(shardsPacket.SessionId))
@@ -218,7 +149,7 @@ namespace TestServer.Controllers
                     return StatusCode(400);
                     //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
                 }
-              
+
                 byte[] responseBytes = results[BaseRequest.Invite];
 
                 ShardsPacket responseShardPacket = Servers.Instance.GetShardPacket(responseBytes);
@@ -245,7 +176,7 @@ namespace TestServer.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> Register()
         {
-
+            Console.WriteLine("TransactionsController Register");
             byte[] requestBytes;
             using (var ms = new MemoryStream())
             {
@@ -253,11 +184,10 @@ namespace TestServer.Controllers
                 requestBytes = ms.ToArray();
             }
 
-            //servers receive + validate the invite transaction
+            // servers receive + validate the register transaction
             try
             {
                 _logger.LogInformation("TransactionsController Register");
-                Console.WriteLine("TransactionsController Register");
 
                 CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
 
@@ -317,7 +247,7 @@ namespace TestServer.Controllers
                 requestBytes = ms.ToArray();
             }
 
-            //servers receive + validate the invite transaction
+            // servers receive + validate the Rekey transaction
             try
             {
                 _logger.LogInformation("TransactionsController Rekey");
@@ -362,7 +292,7 @@ namespace TestServer.Controllers
                 _logger.LogError($"Exception caught: {ex}");
                 return StatusCode(400);
                 //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
-            }         
+            }
         }
 
 
@@ -382,7 +312,7 @@ namespace TestServer.Controllers
                 requestBytes = ms.ToArray();
             }
 
-            //servers receive + validate the invite transaction
+            // servers receive + validate the Login transaction
             try
             {
                 _logger.LogInformation("TransactionsController Login");
@@ -427,7 +357,7 @@ namespace TestServer.Controllers
                 _logger.LogError($"Exception caught: {ex}");
                 return StatusCode(400);
                 //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
-            }         
+            }
         }
 
         // Session endpoint
@@ -446,7 +376,7 @@ namespace TestServer.Controllers
                 requestBytes = ms.ToArray();
             }
 
-            //servers receive + validate the invite transaction
+            // servers receive + validate the Session transaction
             try
             {
                 _logger.LogInformation("TransactionsController Session");
@@ -492,7 +422,7 @@ namespace TestServer.Controllers
                 return StatusCode(400);
                 //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
             }
-         
+
         }
     }
 }
