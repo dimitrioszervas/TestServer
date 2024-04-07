@@ -1,25 +1,57 @@
-var builder = WebApplication.CreateBuilder(args);
+using TestServer.Server;
 
-// Add services to the container.
+/*
+No need to do migrations you use the TestServer's migrations
+ 
+Only create/update the databases 
 
-builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+update-database -Context EndocloudDbContext
+update-database -Context PublicDbContext
 
-var app = builder.Build();
+ */
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+namespace Server1
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    public class Program
+    {
+        public static void Main(string[] args)
+        {
+            var builder = WebApplication.CreateBuilder(args);
+
+
+            // Add services to the container.
+
+            builder.Services.AddControllers();
+            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+            builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerGen();
+
+            var app = builder.Build();
+
+            // Configure the HTTP request pipeline.
+            if (app.Environment.IsDevelopment())
+            {
+                app.UseSwagger();
+                app.UseSwaggerUI();
+            }
+
+            app.UseCors(x => x
+                                .AllowAnyMethod()
+                                .AllowAnyHeader()
+                                .SetIsOriginAllowed(origin => true) // allow any origin
+                                                                    //.WithOrigins("https://localhost:44351")); // Allow only this origin can also have multiple origins separated with comma
+                                .AllowCredentials());
+            app.UseHttpsRedirection();
+
+            app.UseAuthorization();
+
+            app.MapControllers();
+
+
+            CryptoUtils.GenerateOwnerKeys();
+            Servers.Instance.LoadSettings1();
+
+            app.Run();
+        }
+    }
 }
-
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
-
-app.Run();
