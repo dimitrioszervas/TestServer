@@ -10,6 +10,12 @@ namespace TestServer.Server
     /// </summary>
     public sealed class Servers
     {
+        public const string INVITE_ENDPOINT = "api/Transactions/Invite";
+        public const string REGISTER_ENDPOINT = "api/Transactions/Register";
+        public const string REKEY_ENDPOINT = "api/Transactions/Rekey";
+        public const string LOGIN_ENDPOINT = "api/Transactions/Login";
+        public const string SESSION_ENDPOINT = "api/Transactions/Session";
+
         public const int NUM_SERVERS = 3;
 
         // Folder used to store uploaded files/versions before uploading them to a cloud (AWS for example) 
