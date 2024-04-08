@@ -24,7 +24,7 @@ namespace TestServer.Server
             _logger = factory.CreateLogger<ShardsPacketConsumer>();
         }
       
-        public async Task<Dictionary<string, byte[]>> ConsumeAsync(IReceivableSourceBlock<ShardsPacket> source, string requestType, bool useLogins)
+        public async Task<Dictionary<string, byte[]>> ConsumeAsync(IReceivableSourceBlock<ShardsPacket> source, string requestType, bool useRekeys)
         {           
 
             ulong userId;
@@ -60,11 +60,10 @@ namespace TestServer.Server
 
                         // Add each shard of the received paket to the TransactionShards class instance for storage
                         for (int i = 0; i < shardsPacket.MetadataShards.Count; i++)
-                        {
- 
+                        { 
                             // Set received shard to appropriate position in the shards matrix (see TransactionSgards class).
 
-                            shards.SetShard(shardsPacket.ShardNo[i], shardsPacket.MetadataShards[i], shardsPacket.SRC, shardsPacket.hmacResult, useLogins);
+                            shards.SetShard(shardsPacket.ShardNo[i], shardsPacket.MetadataShards[i]);
 
                             // Check if we have enough data shards to rebult the Transaction using Reed-Solomon.
                             if (shards.AreEnoughShards())
@@ -77,7 +76,7 @@ namespace TestServer.Server
 
                                 //var cbor = CBORObject.NewArray().Add(shardsBytes).Add(shardsPacket.SRC);
 
-                                // List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(shardsPacket.SRC) : KeyStore.Inst.GetREKEYS(shardsPacket.SRC);
+                                // List<byte[]> signs = !useRekeys ? KeyStore.Inst.GetSIGNS(shardsPacket.SRC) : KeyStore.Inst.GetREKEYS(shardsPacket.SRC);
 
                                 // bool verified = CryptoUtils.HashIsValid(signs[0], cbor.EncodeToBytes(), shardsPacket.hmacResult);
 

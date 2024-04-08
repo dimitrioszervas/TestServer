@@ -117,9 +117,15 @@ namespace TestServer.Controllers
 
                 CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
 
-                var jsonShardPacket = Encoding.UTF8.GetString(requestCBOR[0].GetByteString());
+                string jsonShardPacket = Encoding.UTF8.GetString(requestCBOR[0].GetByteString());
 
                 var shardsPacket = JsonConvert.DeserializeObject<ShardsPacket>(jsonShardPacket);
+                shardsPacket.Decrypt(false);
+
+                byte[] packetBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(shardsPacket));
+                var packetCBOR = CBORObject.NewArray().Add(packetBytes);
+
+                requestBytes = packetCBOR.EncodeToBytes();
 
                 if (!_transactions.ContainsKey(shardsPacket.SessionId))
                 {
@@ -183,6 +189,12 @@ namespace TestServer.Controllers
                 var jsonShardPacket = Encoding.UTF8.GetString(requestCBOR[0].GetByteString());
 
                 var shardsPacket = JsonConvert.DeserializeObject<ShardsPacket>(jsonShardPacket);
+                shardsPacket.Decrypt(false);
+
+                byte[] packetBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(shardsPacket));
+                var packetCBOR = CBORObject.NewArray().Add(packetBytes);
+
+                requestBytes = packetCBOR.EncodeToBytes();
 
                 if (!_transactions.ContainsKey(shardsPacket.SessionId))
                 {
@@ -247,6 +259,12 @@ namespace TestServer.Controllers
                 var jsonShardPacket = Encoding.UTF8.GetString(requestCBOR[0].GetByteString());
 
                 var shardsPacket = JsonConvert.DeserializeObject<ShardsPacket>(jsonShardPacket);
+                shardsPacket.Decrypt(false);
+
+                byte[] packetBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(shardsPacket));
+                var packetCBOR = CBORObject.NewArray().Add(packetBytes);
+
+                requestBytes = packetCBOR.EncodeToBytes();
 
                 if (!_transactions.ContainsKey(shardsPacket.SessionId))
                 {
@@ -266,10 +284,6 @@ namespace TestServer.Controllers
                 }
 
                 byte[] responseBytes = results[BaseRequest.Rekey];
-
-                Console.WriteLine($"Size: {responseBytes.Length}");
-                Console.WriteLine(CryptoUtils.ByteArrayToStringDebug(responseBytes));
-                Console.WriteLine(Encoding.UTF8.GetString(responseBytes));
 
                 ShardsPacket responseShardPacket = new ShardsPacket();
 
@@ -316,6 +330,12 @@ namespace TestServer.Controllers
                 var jsonShardPacket = Encoding.UTF8.GetString(requestCBOR[0].GetByteString());
 
                 var shardsPacket = JsonConvert.DeserializeObject<ShardsPacket>(jsonShardPacket);
+                shardsPacket.Decrypt(true);
+
+                byte[] packetBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(shardsPacket));
+                var packetCBOR = CBORObject.NewArray().Add(packetBytes);
+
+                requestBytes = packetCBOR.EncodeToBytes();
 
                 if (!_transactions.ContainsKey(shardsPacket.SessionId))
                 {
@@ -380,6 +400,12 @@ namespace TestServer.Controllers
                 var jsonShardPacket = Encoding.UTF8.GetString(requestCBOR[0].GetByteString());
 
                 var shardsPacket = JsonConvert.DeserializeObject<ShardsPacket>(jsonShardPacket);
+                shardsPacket.Decrypt(false);
+
+                byte[] packetBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(shardsPacket));
+                var packetCBOR = CBORObject.NewArray().Add(packetBytes);
+
+                requestBytes = packetCBOR.EncodeToBytes();
 
                 if (!_transactions.ContainsKey(shardsPacket.SessionId))
                 {

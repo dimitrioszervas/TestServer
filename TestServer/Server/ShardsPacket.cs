@@ -1,4 +1,5 @@
-﻿using NuGet.Packaging.Signing;
+﻿using Amazon.DynamoDBv2.Model;
+using NuGet.Packaging.Signing;
 
 namespace TestServer.Server
 {
@@ -30,6 +31,27 @@ namespace TestServer.Server
         public void AddShardNo(int shardNo)
         {
             ShardNo.Add(shardNo);
+        }
+
+        public void Decrypt(bool useRekeys)
+        {
+            int numShards = this.NumTotalShards;
+            int numShardsPerServer = numShards / Servers.NUM_SERVERS;
+
+            List<byte[]> encrypts = !useRekeys ? KeyStore.Inst.GetENCRYPTS(SRC) : KeyStore.Inst.GetREKEYS(SRC);
+            for (int i = 0; i < ShardNo.Count; i++)
+            {
+                int keyIndex = !useRekeys ? (ShardNo[i] / numShardsPerServer) + 1 : Servers.Instance.CurrentServer + 1;
+
+                byte[] encryptedShard = MetadataShards[i];
+
+                // decrypt shard                
+                byte[] shard = CryptoUtils.Decrypt(encryptedShard, encrypts[keyIndex], SRC);
+
+                this.MetadataShards[i] = shard;
+                this.DataShardLength = shard.Length;
+
+            }
         }
     }
 }

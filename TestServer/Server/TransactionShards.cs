@@ -111,30 +111,16 @@ namespace TestServer.Server
         }
 
       
-        public void SetShard(int shardNo, byte[] encryptedShard, byte[] src, byte [] hmacResult, bool useLogins)
+        public void SetShard(int shardNo, byte[] shard)
         {
             try
             {
                 if (!this.shardsPresent[shardNo])
-                {
-                    int numShards = nTotalShards;
-                    int numShardsPerServer = numShards / Servers.NUM_SERVERS;
-                    int keyIndex = (shardNo / numShardsPerServer) + 1;
-
-                    List<byte[]> encrypts = !useLogins ? KeyStore.Inst.GetENCRYPTS(src) : KeyStore.Inst.GetREKEYS(src);
-
-                    // decrypt shard                
-                    byte[] shard = CryptoUtils.Decrypt(encryptedShard, encrypts[keyIndex], src);
-
-                    //List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(src) : KeyStore.Inst.GetREKEYS(src);
-                    //bool verified = CryptoUtils.HashIsValid(signs[keyIndex], shard, hmacResult);
-                    //Console.WriteLine($"Shard No {shardNo} Verified: {verified}");
-
+                {    
                     this.shards[shardNo] = new byte[shard.Length];
                     Array.Copy(shard, this.shards[shardNo], shard.Length);
                     this.shardsPresent[shardNo] = true;
                     this.nReceivedShards++;
-
                     this.shardLength = shard.Length;
                 }
             }
