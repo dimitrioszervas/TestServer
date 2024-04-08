@@ -77,7 +77,7 @@ namespace TestServer.Server
 
                                 //var cbor = CBORObject.NewArray().Add(shardsBytes).Add(shardsPacket.SRC);
 
-                                // List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(shardsPacket.SRC) : KeyStore.Inst.GetLOGINS(shardsPacket.SRC);
+                                // List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(shardsPacket.SRC) : KeyStore.Inst.GetREKEYS(shardsPacket.SRC);
 
                                 // bool verified = CryptoUtils.HashIsValid(signs[0], cbor.EncodeToBytes(), shardsPacket.hmacResult);
 
@@ -185,14 +185,14 @@ namespace TestServer.Server
                                             KeyStore.Inst.StoreDS_PUB(deviceID, DS_PUB);
                                             KeyStore.Inst.StoreNONCE(deviceID, NONCE);
 
-                                            // servers foreach (n > 0),  store LOGINS[n] = ECDH.derive (SE.PRIV[n], DE.PUB) for device.id
-                                            List<byte[]> LOGINS = new List<byte[]>();
+                                            // servers foreach (n > 0),  store REKEYS[n] = ECDH.derive (SE.PRIV[n], DE.PUB) for device.id
+                                            List<byte[]> REKEYS = new List<byte[]>();
                                             for (int n = 0; n <= Servers.NUM_SERVERS; n++)
                                             {
                                                 byte[] derived = CryptoUtils.ECDHDerive(SE_PRIV[n], DE_PUB);
-                                                LOGINS.Add(derived);
+                                                REKEYS.Add(derived);
                                             }
-                                            KeyStore.Inst.StoreLOGINS(deviceID, LOGINS);
+                                            KeyStore.Inst.StoreREKEYS(deviceID, REKEYS);
 
                                             byte[] wTOKEN = KeyStore.Inst.GetWTOKEN(deviceID);
 
@@ -213,9 +213,9 @@ namespace TestServer.Server
 
                                             byte[] deviceID = shardsPacket.SRC;
 
-                                            // servers get LOGINS[] for device
-                                            // servers SIGNS[] = ENCRYPTS[] = LOGINS[]                
-                                            List<byte[]> LOGINS = KeyStore.Inst.GetLOGINS(deviceID);
+                                            // servers get REKEYS[] for device
+                                            // servers SIGNS[] = ENCRYPTS[] = REKEYS[]                
+                                            List<byte[]> LOGINS = KeyStore.Inst.GetREKEYS(deviceID);
 
                                             // servers unwrap + store wSIGNS + wENCRPTS using stored NONCE for device.
                                             List<byte[]> ENCRYPTS = new List<byte[]>();

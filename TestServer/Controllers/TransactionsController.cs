@@ -273,7 +273,8 @@ namespace TestServer.Controllers
 
                 ShardsPacket responseShardPacket = new ShardsPacket();
 
-                responseShardPacket.AddDataShard(responseBytes);              
+                responseShardPacket.AddDataShard(responseBytes);
+                responseShardPacket.DataShardLength = responseBytes.Length;
 
                 //return ReturnBytes(shardPacketBytes, HttpStatusCode.OK);
                 return Ok(responseShardPacket);

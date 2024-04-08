@@ -121,12 +121,12 @@ namespace TestServer.Server
                     int numShardsPerServer = numShards / Servers.NUM_SERVERS;
                     int keyIndex = (shardNo / numShardsPerServer) + 1;
 
-                    List<byte[]> encrypts = !useLogins ? KeyStore.Inst.GetENCRYPTS(src) : KeyStore.Inst.GetLOGINS(src);
+                    List<byte[]> encrypts = !useLogins ? KeyStore.Inst.GetENCRYPTS(src) : KeyStore.Inst.GetREKEYS(src);
 
                     // decrypt shard                
                     byte[] shard = CryptoUtils.Decrypt(encryptedShard, encrypts[keyIndex], src);
 
-                    //List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(src) : KeyStore.Inst.GetLOGINS(src);
+                    //List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(src) : KeyStore.Inst.GetREKEYS(src);
                     //bool verified = CryptoUtils.HashIsValid(signs[keyIndex], shard, hmacResult);
                     //Console.WriteLine($"Shard No {shardNo} Verified: {verified}");
 
