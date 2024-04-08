@@ -271,12 +271,9 @@ namespace TestServer.Controllers
                 Console.WriteLine(CryptoUtils.ByteArrayToStringDebug(responseBytes));
                 Console.WriteLine(Encoding.UTF8.GetString(responseBytes));
 
-                ShardsPacket responseShardPacket = Servers.Instance.GetShardPacket(responseBytes);
+                ShardsPacket responseShardPacket = new ShardsPacket();
 
-                //var responseCBOR = CBORObject.DecodeFromBytes(responseBytes);
-                //Console.WriteLine(responseCBOR.ToJSONString());
-
-                //byte[] shardPacketBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(responseShardPacket));
+                responseShardPacket.AddDataShard(responseBytes);              
 
                 //return ReturnBytes(shardPacketBytes, HttpStatusCode.OK);
                 return Ok(responseShardPacket);

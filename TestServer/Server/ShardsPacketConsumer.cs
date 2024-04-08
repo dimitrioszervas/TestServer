@@ -135,7 +135,6 @@ namespace TestServer.Server
                                             KeyStore.Inst.StoreNONCE(deviceID, NONCE);
                                             KeyStore.Inst.StoreWTOKEN(deviceID, wTOKEN);
 
-
                                             // server response is ok
                                             var cborRegisterResponse = CBORObject.NewMap().Add("REGISTER", "SUCCESS");
 
@@ -202,7 +201,7 @@ namespace TestServer.Server
                                                 .Add("wTOKEN", wTOKEN)
                                                 .Add("SE_PUB", SE_PUB);
 
-                                            responses.Add(BaseRequest.Rekey, Encoding.UTF8.GetBytes(cborRekeyResponse.ToJSONString()));
+                                            responses.Add(BaseRequest.Rekey, cborRekeyResponse.EncodeToBytes());
                                         }
                                         break;
                                     case BaseRequest.Login:
