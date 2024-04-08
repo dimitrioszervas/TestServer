@@ -126,9 +126,9 @@ namespace TestServer.Server
                     // decrypt shard                
                     byte[] shard = CryptoUtils.Decrypt(encryptedShard, encrypts[keyIndex], src);
 
-                    List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(src) : KeyStore.Inst.GetLOGINS(src);
-                    bool verified = CryptoUtils.HashIsValid(signs[keyIndex], shard, hmacResult);
-                    Console.WriteLine($"Shard No {shardNo} Verified: {verified}");
+                    //List<byte[]> signs = !useLogins ? KeyStore.Inst.GetSIGNS(src) : KeyStore.Inst.GetLOGINS(src);
+                    //bool verified = CryptoUtils.HashIsValid(signs[keyIndex], shard, hmacResult);
+                    //Console.WriteLine($"Shard No {shardNo} Verified: {verified}");
 
                     this.shards[shardNo] = new byte[shard.Length];
                     Array.Copy(shard, this.shards[shardNo], shard.Length);

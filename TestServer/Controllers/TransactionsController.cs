@@ -269,6 +269,7 @@ namespace TestServer.Controllers
 
                 Console.WriteLine($"Size: {responseBytes.Length}");
                 Console.WriteLine(CryptoUtils.ByteArrayToStringDebug(responseBytes));
+                Console.WriteLine(Encoding.UTF8.GetString(responseBytes));
 
                 ShardsPacket responseShardPacket = Servers.Instance.GetShardPacket(responseBytes);
 
