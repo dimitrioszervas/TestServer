@@ -198,7 +198,7 @@ namespace TestServer.Server
                                             //  response is wTOKEN, SE.PUB[] 
                                             var cborRekeyResponse = CBORObject.NewMap()
                                                 .Add("wTOKEN", wTOKEN)
-                                                .Add("SE_PUB", SE_PUB[Servers.Instance.CurrentServer + 1]);
+                                                .Add("SE_PUB", SE_PUB[0]);
 
                                             responses.Add(BaseRequest.Rekey, cborRekeyResponse.EncodeToBytes());
                                         }

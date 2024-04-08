@@ -287,6 +287,7 @@ namespace TestServer.Controllers
 
                 ShardsPacket responseShardPacket = new ShardsPacket();
 
+                responseShardPacket.AddShardNo(Servers.Instance.CurrentServer);
                 responseShardPacket.AddDataShard(responseBytes);
                 responseShardPacket.DataShardLength = responseBytes.Length;
 

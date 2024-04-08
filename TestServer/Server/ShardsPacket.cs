@@ -41,7 +41,7 @@ namespace TestServer.Server
             List<byte[]> encrypts = !useRekeys ? KeyStore.Inst.GetENCRYPTS(SRC) : KeyStore.Inst.GetREKEYS(SRC);
             for (int i = 0; i < ShardNo.Count; i++)
             {
-                int keyIndex = !useRekeys ? (ShardNo[i] / numShardsPerServer) + 1 : Servers.Instance.CurrentServer + 1;
+                int keyIndex = !useRekeys ? (ShardNo[i] / numShardsPerServer) + 1 : 0;
 
                 byte[] encryptedShard = MetadataShards[i];
 
