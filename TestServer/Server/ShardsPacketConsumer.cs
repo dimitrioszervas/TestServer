@@ -76,7 +76,7 @@ namespace TestServer.Server
 
                                 //var cbor = CBORObject.NewArray().Add(shardsBytes).Add(shardsPacket.SRC);
 
-                                // List<byte[]> signs = !useRekeys ? KeyStore.Inst.GetSIGNS(shardsPacket.SRC) : KeyStore.Inst.GetREKEYS(shardsPacket.SRC);
+                                // List<byte[]> signs = !useRekeys ? KeyStore.Inst.GetSIGNS(shardsPacket.SRC) : KeyStore.Inst.GetREKEY(shardsPacket.SRC);
 
                                 // bool verified = CryptoUtils.HashIsValid(signs[0], cbor.EncodeToBytes(), shardsPacket.hmacResult);
 
@@ -151,15 +151,11 @@ namespace TestServer.Server
                                             byte[] DE_PUB = CryptoUtils.CBORBinaryStringToBytes(rekeyObj.DE_PUB);
                                             byte[] NONCE = CryptoUtils.CBORBinaryStringToBytes(rekeyObj.NONCE);
 
-                                            // servers create SE[] = create ECDH key pair        
-                                            List<byte[]> SE_PUB = new List<byte[]>();
-                                            List<byte[]> SE_PRIV = new List<byte[]>();
-                                            for (int n = 0; n <= Servers.NUM_SERVERS; n++)
-                                            {
-                                                var keyPairECDH = CryptoUtils.CreateECDH();
-                                                SE_PUB.Add(CryptoUtils.ConverCngKeyBlobToRaw(keyPairECDH.PublicKey));
-                                                SE_PRIV.Add(keyPairECDH.PrivateKey);
-                                            }
+                                            // servers create SE[] = create ECDH key pair   
+                                            var keyPairECDH = CryptoUtils.CreateECDH();
+                                            byte[] SE_PUB = CryptoUtils.ConverCngKeyBlobToRaw(keyPairECDH.PublicKey);
+                                            byte[] SE_PRIV = keyPairECDH.PrivateKey;
+                                          
 
                                             byte[] deviceID = shardsPacket.SRC;
 
@@ -184,21 +180,17 @@ namespace TestServer.Server
                                             KeyStore.Inst.StoreDS_PUB(deviceID, DS_PUB);
                                             KeyStore.Inst.StoreNONCE(deviceID, NONCE);
 
-                                            // servers foreach (n > 0),  store REKEYS[n] = ECDH.derive (SE.PRIV[n], DE.PUB) for device.id
-                                            List<byte[]> REKEYS = new List<byte[]>();
-                                            for (int n = 0; n <= Servers.NUM_SERVERS; n++)
-                                            {
-                                                byte[] derived = CryptoUtils.ECDHDerive(SE_PRIV[n], DE_PUB);
-                                                REKEYS.Add(derived);
-                                            }
-                                            KeyStore.Inst.StoreREKEYS(deviceID, REKEYS);
+                                            // servers foreach (n > 0),  store REKEY[n] = ECDH.derive (SE.PRIV[n], DE.PUB) for device.id
+                                            byte[] REKEY = CryptoUtils.ECDHDerive(SE_PRIV, DE_PUB);
+                                           
+                                            KeyStore.Inst.StoreREKEY(deviceID, REKEY);
 
                                             byte[] wTOKEN = KeyStore.Inst.GetWTOKEN(deviceID);
 
                                             //  response is wTOKEN, SE.PUB[] 
                                             var cborRekeyResponse = CBORObject.NewMap()
                                                 .Add("wTOKEN", wTOKEN)
-                                                .Add("SE_PUB", SE_PUB[0]);
+                                                .Add("SE_PUB", SE_PUB);
 
                                             responses.Add(BaseRequest.Rekey, cborRekeyResponse.EncodeToBytes());
                                         }
@@ -212,9 +204,9 @@ namespace TestServer.Server
 
                                             byte[] deviceID = shardsPacket.SRC;
 
-                                            // servers get REKEYS[] for device
-                                            // servers SIGNS[] = ENCRYPTS[] = REKEYS[]                
-                                            List<byte[]> LOGINS = KeyStore.Inst.GetREKEYS(deviceID);
+                                            // servers get REKEY[] for device
+                                            // servers SIGNS[] = ENCRYPTS[] = REKEY[]                
+                                            byte[] REKEY = KeyStore.Inst.GetREKEY(deviceID);
 
                                             // servers unwrap + store wSIGNS + wENCRPTS using stored NONCE for device.
                                             List<byte[]> ENCRYPTS = new List<byte[]>();

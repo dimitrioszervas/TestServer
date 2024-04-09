@@ -38,15 +38,16 @@ namespace TestServer.Server
             int numShards = this.NumTotalShards;
             int numShardsPerServer = numShards / Servers.NUM_SERVERS;
 
-            List<byte[]> encrypts = !useRekeys ? KeyStore.Inst.GetENCRYPTS(SRC) : KeyStore.Inst.GetREKEYS(SRC);
             for (int i = 0; i < ShardNo.Count; i++)
             {
                 int keyIndex = !useRekeys ? (ShardNo[i] / numShardsPerServer) + 1 : 0;
 
+                byte[] encrypt = !useRekeys ? KeyStore.Inst.GetENCRYPTS(SRC)[keyIndex] : KeyStore.Inst.GetREKEY(SRC);
+
                 byte[] encryptedShard = MetadataShards[i];
 
                 // decrypt shard                
-                byte[] shard = CryptoUtils.Decrypt(encryptedShard, encrypts[keyIndex], SRC);
+                byte[] shard = CryptoUtils.Decrypt(encryptedShard, encrypt, SRC);
 
                 this.MetadataShards[i] = shard;
                 this.DataShardLength = shard.Length;

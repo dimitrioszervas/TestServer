@@ -9,7 +9,7 @@ namespace TestServer.Server
         {
             public List<byte[]> ENCRYPTS { get; set; } = new List<byte[]>();
             public List<byte[]> SIGNS { get; set; } = new List<byte[]>();
-            public List<byte[]> REKEYS { get; set; } = new List<byte[]>();
+            public byte[] REKEY { get; set; }
             public List<byte[]> SE_PRIV { get; set; } = new List<byte[]>();
 
             public byte[] DS_PUB;
@@ -192,25 +192,21 @@ namespace TestServer.Server
             return _KEYS[srcID].DS_PUB;
         }
 
-        public void StoreREKEYS(byte[] SRC, List<byte[]> LOGINS)
+        public void StoreREKEY(byte[] SRC, byte[] REKEY)
         {
             string srcID = ByteArrayToString(SRC);
-
             if (!_KEYS.ContainsKey(srcID))
             {
                 _KEYS.TryAdd(srcID, new Keys());
             }
-            _KEYS[srcID].REKEYS.Clear();
-            for (int i = 0; i < LOGINS.Count; i++)
-            {
-                _KEYS[srcID].REKEYS.Add(LOGINS[i]);
-            }
+            _KEYS[srcID].REKEY = new byte[REKEY.Length];
+            Array.Copy(REKEY, _KEYS[srcID].REKEY, REKEY.Length);
         }
 
-        public List<byte[]> GetREKEYS(byte[] SRC)
+        public byte[] GetREKEY(byte[] SRC)
         {
             string srcID = ByteArrayToString(SRC);
-            return _KEYS[srcID].REKEYS;
+            return _KEYS[srcID].REKEY;
         }
 
     }
