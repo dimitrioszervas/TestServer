@@ -43,13 +43,7 @@ namespace TestServer.Controllers
                 _logger.LogError($"Exception caught: {ex}");
             }
         }
-
-        /// <summary>
-        /// Receives shards packets from the other servers.
-        /// </summary>
-        /// <param name="shardsPacketDto"></param>
-        /// <returns>Status200OK.<br/>Status400BadRequest.<br/>Status500InternalServerError.</returns>
-        // POST: api/Files/receive-shard
+               
         [HttpPost]
         [Route("receive-shard")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -97,8 +91,7 @@ namespace TestServer.Controllers
         [Route("Invite")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        //public async Task<HttpResponseMessage> Invite()
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]      
         public async Task<ActionResult> Invite()
         {
 
@@ -142,7 +135,6 @@ namespace TestServer.Controllers
                 if (results.Count == 0)
                 {
                     return StatusCode(400);
-                    //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
                 }
 
                 byte[] responseBytes = results[BaseRequest.Invite];
@@ -150,8 +142,7 @@ namespace TestServer.Controllers
                 ShardsPacket responseShardPacket = Servers.Inst.GetShardPacket(responseBytes);
 
                 byte[] shardPacketBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(responseShardPacket));
-
-                //return ReturnBytes(shardPacketBytes, HttpStatusCode.OK);
+                              
                 return Ok(responseShardPacket);
             }
             catch (Exception ex)
@@ -159,7 +150,6 @@ namespace TestServer.Controllers
                 Console.WriteLine($"Exception caught: {ex}");
                 _logger.LogError($"Exception caught: {ex}");
                 return StatusCode(400);
-                //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
             }
         }
 
@@ -211,7 +201,6 @@ namespace TestServer.Controllers
                 if (results.Count == 0)
                 {
                     return StatusCode(400);
-                    //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
                 }
 
                 byte[] responseBytes = results[BaseRequest.Register];
@@ -219,16 +208,14 @@ namespace TestServer.Controllers
                 ShardsPacket responseShardPacket = Servers.Inst.GetShardPacket(responseBytes);
 
                 byte[] shardPacketBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(responseShardPacket));
-
-                //return ReturnBytes(shardPacketBytes, HttpStatusCode.OK);
+                                
                 return Ok(responseShardPacket);
             }
             catch (Exception ex)
             {
 
                 _logger.LogError($"Exception caught: {ex}");
-                return StatusCode(400);
-                //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
+                return StatusCode(400);                
             }
         }
 
@@ -290,8 +277,7 @@ namespace TestServer.Controllers
                 responseShardPacket.AddShardNo(Servers.Inst.CurrentServer);
                 responseShardPacket.AddDataShard(responseBytes);
                 responseShardPacket.DataShardLength = responseBytes.Length;
-
-                //return ReturnBytes(shardPacketBytes, HttpStatusCode.OK);
+                                
                 return Ok(responseShardPacket);
             }
             catch (Exception ex)
@@ -299,7 +285,6 @@ namespace TestServer.Controllers
 
                 _logger.LogError($"Exception caught: {ex}");
                 return StatusCode(400);
-                //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
             }
         }
 
@@ -352,8 +337,7 @@ namespace TestServer.Controllers
 
                 if (results.Count == 0)
                 {
-                    return StatusCode(400);
-                    //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
+                    return StatusCode(400);;
                 }
 
                 byte[] responseBytes = results[BaseRequest.Login];
@@ -361,8 +345,7 @@ namespace TestServer.Controllers
                 ShardsPacket responseShardPacket = Servers.Inst.GetShardPacket(responseBytes);
 
                 byte[] shardPacketBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(responseShardPacket));
-
-                //return ReturnBytes(shardPacketBytes, HttpStatusCode.OK);
+                               
                 return Ok(responseShardPacket);
             }
             catch (Exception ex)
@@ -370,7 +353,6 @@ namespace TestServer.Controllers
 
                 _logger.LogError($"Exception caught: {ex}");
                 return StatusCode(400);
-                //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
             }
         }
 
@@ -423,7 +405,6 @@ namespace TestServer.Controllers
                 if (results.Count == 0)
                 {
                     return StatusCode(400);
-                    //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
                 }
 
                 byte[] responseBytes = results[BaseRequest.Session];
@@ -437,10 +418,8 @@ namespace TestServer.Controllers
             }
             catch (Exception ex)
             {
-
                 _logger.LogError($"Exception caught: {ex}");
                 return StatusCode(400);
-                //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
             }
 
         }
