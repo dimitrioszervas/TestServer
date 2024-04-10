@@ -47,9 +47,8 @@ namespace Server1
 
             app.MapControllers();
 
-
+            Servers.Inst.LoadSettings1();
             CryptoUtils.GenerateOwnerKeys();
-            Servers.Instance.LoadSettings1();
 
             app.Run();
         }

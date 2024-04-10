@@ -379,8 +379,16 @@ namespace TestServer.Server
 
             GenerateKeys(ref encrypts, ref signs, ref scr, secret, salt, Servers.NUM_SERVERS);
 
-            KeyStore.Inst.StoreENCRYPTS(ownerID, encrypts);
-            KeyStore.Inst.StoreSIGNS(ownerID, signs);
+            List<byte[]> ENCRYPTS = new List<byte[]>();
+            List<byte[]> SIGNS = new List<byte[]>();
+            
+            ENCRYPTS.Add(encrypts[0]);
+            SIGNS.Add(signs[0]);
+            ENCRYPTS.Add(encrypts[Servers.Inst.CurrentServer + 1]);
+            SIGNS.Add(signs[Servers.Inst.CurrentServer + 1]);
+
+            KeyStore.Inst.StoreENCRYPTS(ownerID, ENCRYPTS);
+            KeyStore.Inst.StoreSIGNS(ownerID, SIGNS);
         }
     }
 }

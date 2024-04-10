@@ -41,10 +41,8 @@ namespace TestServer.Server
                 _KEYS.TryAdd(srcID, new Keys());
             }
             _KEYS[srcID].ENCRYPTS.Clear();
-            for (int i = 0; i < ENCRYPTS.Count; i++)
-            {
-                _KEYS[srcID].ENCRYPTS.Add(CryptoUtils.CBORBinaryStringToBytes(ENCRYPTS[i]));
-            }
+            _KEYS[srcID].ENCRYPTS.Add(CryptoUtils.CBORBinaryStringToBytes(ENCRYPTS[0]));
+            _KEYS[srcID].ENCRYPTS.Add(CryptoUtils.CBORBinaryStringToBytes(ENCRYPTS[Servers.Inst.CurrentServer + 1]));
         }
 
         public void StoreENCRYPTS(byte[] SRC, List<byte[]> ENCRYPTS)

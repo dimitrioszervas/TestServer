@@ -43,7 +43,7 @@ namespace TestServer.Server
         }
 
         // Static instance of the Servers class
-        public static Servers Instance { get { return lazy.Value; } }
+        public static Servers Inst { get { return lazy.Value; } }
 
         public bool LoadSettings1()
         {

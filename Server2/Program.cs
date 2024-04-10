@@ -45,9 +45,8 @@ namespace Server2
 
             app.MapControllers();
 
-
+            Servers.Inst.LoadSettings2();
             CryptoUtils.GenerateOwnerKeys();
-            Servers.Instance.LoadSettings2();
 
             app.Run();
         }

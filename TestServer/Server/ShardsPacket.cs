@@ -33,25 +33,26 @@ namespace TestServer.Server
             ShardNo.Add(shardNo);
         }
 
-        public void Decrypt(bool useRekeys)
+        public void Decrypt(bool usePreKey)
         {
-            int numShards = this.NumTotalShards;
-            int numShardsPerServer = numShards / Servers.NUM_SERVERS;
-
             for (int i = 0; i < ShardNo.Count; i++)
             {
-                int keyIndex = !useRekeys ? (ShardNo[i] / numShardsPerServer) + 1 : 0;
+                try
+                {
+                    byte[] encrypt = !usePreKey ? KeyStore.Inst.GetENCRYPTS(SRC)[1] : KeyStore.Inst.GetPreKEY(SRC);
 
-                byte[] encrypt = !useRekeys ? KeyStore.Inst.GetENCRYPTS(SRC)[keyIndex] : KeyStore.Inst.GetPreKEY(SRC);
+                    byte[] encryptedShard = MetadataShards[i];
 
-                byte[] encryptedShard = MetadataShards[i];
+                    // decrypt shard                
+                    byte[] decryptedShard = CryptoUtils.Decrypt(encryptedShard, encrypt, SRC);
 
-                // decrypt shard                
-                byte[] shard = CryptoUtils.Decrypt(encryptedShard, encrypt, SRC);
-
-                this.MetadataShards[i] = shard;
-                this.DataShardLength = shard.Length;
-
+                    this.MetadataShards[i] = decryptedShard;
+                    this.DataShardLength = decryptedShard.Length;
+                }
+                catch(Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
             }
         }
     }

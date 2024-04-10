@@ -36,7 +36,7 @@ namespace TestServer.Controllers
         {
             try
             {
-                Servers.Instance.ReplicateMetadataShards(requestBytes, TRANSACTIONS_RECEIVE_SHARD_END_POINT);
+                Servers.Inst.ReplicateMetadataShards(requestBytes, TRANSACTIONS_RECEIVE_SHARD_END_POINT);
             }
             catch (Exception ex)
             {
@@ -132,7 +132,7 @@ namespace TestServer.Controllers
                     _transactions.TryAdd(shardsPacket.SessionId, new ShardsPacketConsumer());
                 }
 
-                var consumerTask = _transactions[shardsPacket.SessionId].ConsumeAsync(_transactions[shardsPacket.SessionId].Buffer, BaseRequest.Invite, false);
+                var consumerTask = _transactions[shardsPacket.SessionId].ConsumeAsync(_transactions[shardsPacket.SessionId].Buffer, BaseRequest.Invite);
                 _transactions[shardsPacket.SessionId].Buffer.Post(shardsPacket);
                 ReplicateMetadataShards(requestBytes);
                 var results = await consumerTask;
@@ -147,7 +147,7 @@ namespace TestServer.Controllers
 
                 byte[] responseBytes = results[BaseRequest.Invite];
 
-                ShardsPacket responseShardPacket = Servers.Instance.GetShardPacket(responseBytes);
+                ShardsPacket responseShardPacket = Servers.Inst.GetShardPacket(responseBytes);
 
                 byte[] shardPacketBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(responseShardPacket));
 
@@ -156,7 +156,7 @@ namespace TestServer.Controllers
             }
             catch (Exception ex)
             {
-
+                Console.WriteLine($"Exception caught: {ex}");
                 _logger.LogError($"Exception caught: {ex}");
                 return StatusCode(400);
                 //return ReturnBytes(new byte[1], HttpStatusCode.BadRequest);
@@ -201,7 +201,7 @@ namespace TestServer.Controllers
                     _transactions.TryAdd(shardsPacket.SessionId, new ShardsPacketConsumer());
                 }
 
-                var consumerTask = _transactions[shardsPacket.SessionId].ConsumeAsync(_transactions[shardsPacket.SessionId].Buffer, BaseRequest.Register, false);
+                var consumerTask = _transactions[shardsPacket.SessionId].ConsumeAsync(_transactions[shardsPacket.SessionId].Buffer, BaseRequest.Register);
                 _transactions[shardsPacket.SessionId].Buffer.Post(shardsPacket);
                 ReplicateMetadataShards(requestBytes);
                 var results = await consumerTask;
@@ -216,7 +216,7 @@ namespace TestServer.Controllers
 
                 byte[] responseBytes = results[BaseRequest.Register];
 
-                ShardsPacket responseShardPacket = Servers.Instance.GetShardPacket(responseBytes);
+                ShardsPacket responseShardPacket = Servers.Inst.GetShardPacket(responseBytes);
 
                 byte[] shardPacketBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(responseShardPacket));
 
@@ -271,7 +271,7 @@ namespace TestServer.Controllers
                     _transactions.TryAdd(shardsPacket.SessionId, new ShardsPacketConsumer());
                 }
 
-                var consumerTask = _transactions[shardsPacket.SessionId].ConsumeAsync(_transactions[shardsPacket.SessionId].Buffer, BaseRequest.Rekey, false);
+                var consumerTask = _transactions[shardsPacket.SessionId].ConsumeAsync(_transactions[shardsPacket.SessionId].Buffer, BaseRequest.Rekey);
                 _transactions[shardsPacket.SessionId].Buffer.Post(shardsPacket);
                 ReplicateMetadataShards(requestBytes);
                 var results = await consumerTask;
@@ -287,7 +287,7 @@ namespace TestServer.Controllers
 
                 ShardsPacket responseShardPacket = new ShardsPacket();
 
-                responseShardPacket.AddShardNo(Servers.Instance.CurrentServer);
+                responseShardPacket.AddShardNo(Servers.Inst.CurrentServer);
                 responseShardPacket.AddDataShard(responseBytes);
                 responseShardPacket.DataShardLength = responseBytes.Length;
 
@@ -343,7 +343,7 @@ namespace TestServer.Controllers
                     _transactions.TryAdd(shardsPacket.SessionId, new ShardsPacketConsumer());
                 }
 
-                var consumerTask = _transactions[shardsPacket.SessionId].ConsumeAsync(_transactions[shardsPacket.SessionId].Buffer, BaseRequest.Login, true);
+                var consumerTask = _transactions[shardsPacket.SessionId].ConsumeAsync(_transactions[shardsPacket.SessionId].Buffer, BaseRequest.Login);
                 _transactions[shardsPacket.SessionId].Buffer.Post(shardsPacket);
                 ReplicateMetadataShards(requestBytes);
                 var results = await consumerTask;
@@ -358,7 +358,7 @@ namespace TestServer.Controllers
 
                 byte[] responseBytes = results[BaseRequest.Login];
 
-                ShardsPacket responseShardPacket = Servers.Instance.GetShardPacket(responseBytes);
+                ShardsPacket responseShardPacket = Servers.Inst.GetShardPacket(responseBytes);
 
                 byte[] shardPacketBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(responseShardPacket));
 
@@ -413,7 +413,7 @@ namespace TestServer.Controllers
                     _transactions.TryAdd(shardsPacket.SessionId, new ShardsPacketConsumer());
                 }
 
-                var consumerTask = _transactions[shardsPacket.SessionId].ConsumeAsync(_transactions[shardsPacket.SessionId].Buffer, BaseRequest.Session, false);
+                var consumerTask = _transactions[shardsPacket.SessionId].ConsumeAsync(_transactions[shardsPacket.SessionId].Buffer, BaseRequest.Session);
                 _transactions[shardsPacket.SessionId].Buffer.Post(shardsPacket);
                 ReplicateMetadataShards(requestBytes);
                 var results = await consumerTask;
@@ -428,7 +428,7 @@ namespace TestServer.Controllers
 
                 byte[] responseBytes = results[BaseRequest.Session];
 
-                ShardsPacket responseShardPacket = Servers.Instance.GetShardPacket(responseBytes);
+                ShardsPacket responseShardPacket = Servers.Inst.GetShardPacket(responseBytes);
 
                 byte[] shardPacketBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(responseShardPacket));
 

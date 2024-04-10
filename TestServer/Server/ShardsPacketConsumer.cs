@@ -24,7 +24,7 @@ namespace TestServer.Server
             _logger = factory.CreateLogger<ShardsPacketConsumer>();
         }
       
-        public async Task<Dictionary<string, byte[]>> ConsumeAsync(IReceivableSourceBlock<ShardsPacket> source, string requestType, bool useRekeys)
+        public async Task<Dictionary<string, byte[]>> ConsumeAsync(IReceivableSourceBlock<ShardsPacket> source, string requestType)
         {           
 
             ulong userId;
@@ -94,6 +94,7 @@ namespace TestServer.Server
                                 switch (requestType) {
                                     case BaseRequest.Invite:
                                         {
+                                            Console.WriteLine("BaseRequest.Invite Start");
                                             //servers receive + validate the invite transaction
 
                                             InviteRequest inviteObj = JsonConvert.DeserializeObject<InviteRequest>(shardsJsonString);
@@ -109,22 +110,23 @@ namespace TestServer.Server
                                             // 1st element at posistion 0 in not encrypted
                                             inviteENCRYPTS.Add(CryptoUtils.CBORBinaryStringToBytes(inviteObj.inviteENCRYPTS[0]));
                                             inviteSIGNS.Add(CryptoUtils.CBORBinaryStringToBytes(inviteObj.inviteSIGNS[0]));
-                                            for (int n = 1; n <= Servers.NUM_SERVERS; n++) 
-                                            {
-                                                byte[] decryptedInviteENCRYPT = CryptoUtils.Decrypt(
-                                                    CryptoUtils.CBORBinaryStringToBytes(inviteObj.inviteENCRYPTS[n]),
-                                                    KeyStore.Inst.GetENCRYPTS(ownerID)[n],
-                                                    ownerID);
 
-                                                inviteENCRYPTS.Add(decryptedInviteENCRYPT);
+                                            int n = Servers.Inst.CurrentServer + 1;
 
-                                                byte[] decryptedInviteSIGN = CryptoUtils.Decrypt(
-                                                    CryptoUtils.CBORBinaryStringToBytes(inviteObj.inviteSIGNS[n]),
-                                                    KeyStore.Inst.GetENCRYPTS(ownerID)[n],
-                                                    ownerID);
+                                            byte[] decryptedInviteENCRYPT = CryptoUtils.Decrypt(
+                                                CryptoUtils.CBORBinaryStringToBytes(inviteObj.inviteENCRYPTS[n]),
+                                                KeyStore.Inst.GetENCRYPTS(ownerID)[1],
+                                                ownerID);
 
-                                                inviteSIGNS.Add(decryptedInviteSIGN);
-                                            }
+                                            inviteENCRYPTS.Add(decryptedInviteENCRYPT);
+
+                                            byte[] decryptedInviteSIGN = CryptoUtils.Decrypt(
+                                                CryptoUtils.CBORBinaryStringToBytes(inviteObj.inviteSIGNS[n]),
+                                                KeyStore.Inst.GetENCRYPTS(ownerID)[1],
+                                                ownerID);
+
+                                            inviteSIGNS.Add(decryptedInviteSIGN);
+                                          
                                             KeyStore.Inst.StoreENCRYPTS(inviteID, inviteENCRYPTS);
                                             KeyStore.Inst.StoreSIGNS(inviteID, inviteSIGNS);
 
@@ -132,6 +134,8 @@ namespace TestServer.Server
                                             var cborInviteResponse = CBORObject.NewMap().Add("INVITE", "SUCCESS");
 
                                             responses.Add(BaseRequest.Invite, cborInviteResponse.EncodeToBytes());
+
+                                            Console.WriteLine("BaseRequest.Invite END");
                                         }
                                         break;
 
@@ -187,15 +191,18 @@ namespace TestServer.Server
                                             List<byte[]> ENCRYPTS = new List<byte[]>();
                                             List<byte[]> SIGNS = new List<byte[]>();
                                             byte[] oldNONCE = KeyStore.Inst.GetNONCE(deviceID);
-                                            for (int n = 0; n < CryptoUtils.NUM_SIGNS_OR_ENCRYPTS; n++)
+                                            for (int n = 0; n < Servers.NUM_SERVERS; n++)
                                             {
-                                                byte[] wENCRYPT = CryptoUtils.CBORBinaryStringToBytes(rekeyObj.wENCRYPTS[n]);
-                                                byte[] unwrapENCRYPT = CryptoUtils.Unwrap(wENCRYPT, oldNONCE);
-                                                ENCRYPTS.Add(unwrapENCRYPT);
+                                                if (n == 0 || n == (Servers.Inst.CurrentServer + 1))
+                                                {
+                                                    byte[] wENCRYPT = CryptoUtils.CBORBinaryStringToBytes(rekeyObj.wENCRYPTS[n]);
+                                                    byte[] unwrapENCRYPT = CryptoUtils.Unwrap(wENCRYPT, oldNONCE);
+                                                    ENCRYPTS.Add(unwrapENCRYPT);
 
-                                                byte[] wSIGN = CryptoUtils.CBORBinaryStringToBytes(rekeyObj.wSIGNS[n]);
-                                                byte[] unwrapSIGN = CryptoUtils.Unwrap(wSIGN, oldNONCE);
-                                                SIGNS.Add(unwrapSIGN);
+                                                    byte[] wSIGN = CryptoUtils.CBORBinaryStringToBytes(rekeyObj.wSIGNS[n]);
+                                                    byte[] unwrapSIGN = CryptoUtils.Unwrap(wSIGN, oldNONCE);
+                                                    SIGNS.Add(unwrapSIGN);
+                                                }
                                             }
                                             KeyStore.Inst.StoreENCRYPTS(deviceID, ENCRYPTS);
                                             KeyStore.Inst.StoreSIGNS(deviceID, SIGNS);
@@ -238,13 +245,16 @@ namespace TestServer.Server
                                             byte[] NONCE = CryptoUtils.CBORBinaryStringToBytes(transactionObj.NONCE);// KeyStore.Inst.GetNONCE(deviceID);
                                             for (int n = 0; n < CryptoUtils.NUM_SIGNS_OR_ENCRYPTS; n++)
                                             {
-                                                byte[] wENCRYPT = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wENCRYPTS[n]);
-                                                byte[] unwrapENCRYPT = CryptoUtils.Unwrap(wENCRYPT, NONCE);
-                                                ENCRYPTS.Add(unwrapENCRYPT);
+                                                if (n == 0 || n == (Servers.Inst.CurrentServer + 1))
+                                                {
+                                                    byte[] wENCRYPT = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wENCRYPTS[n]);
+                                                    byte[] unwrapENCRYPT = CryptoUtils.Unwrap(wENCRYPT, NONCE);
+                                                    ENCRYPTS.Add(unwrapENCRYPT);
 
-                                                byte[] wSIGN = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wSIGNS[n]);
-                                                byte[] unwrapSIGN = CryptoUtils.Unwrap(wSIGN, NONCE);
-                                                SIGNS.Add(unwrapSIGN);
+                                                    byte[] wSIGN = CryptoUtils.CBORBinaryStringToBytes(transactionObj.wSIGNS[n]);
+                                                    byte[] unwrapSIGN = CryptoUtils.Unwrap(wSIGN, NONCE);
+                                                    SIGNS.Add(unwrapSIGN);
+                                                }
                                             }
                                             KeyStore.Inst.StoreENCRYPTS(deviceID, ENCRYPTS);
                                             KeyStore.Inst.StoreSIGNS(deviceID, SIGNS);
@@ -281,6 +291,7 @@ namespace TestServer.Server
                     }
                     catch (Exception ex)
                     {
+                        Console.WriteLine($"ConsumeAsync Exception caught: {ex}");
                         _logger.LogError($"ConsumeAsync Exception caught: {ex}");
                         _logger.LogInformation("ConsumeAsync: Transaction failed!");
                         responses.Clear();

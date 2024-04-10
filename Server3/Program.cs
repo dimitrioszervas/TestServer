@@ -47,9 +47,8 @@ namespace Server3
 
             app.MapControllers();
 
-
+            Servers.Inst.LoadSettings3();
             CryptoUtils.GenerateOwnerKeys();
-            Servers.Instance.LoadSettings3();
 
             app.Run();
 
