@@ -42,7 +42,7 @@ namespace TestServer.Server
             {
                 int keyIndex = !useRekeys ? (ShardNo[i] / numShardsPerServer) + 1 : 0;
 
-                byte[] encrypt = !useRekeys ? KeyStore.Inst.GetENCRYPTS(SRC)[keyIndex] : KeyStore.Inst.GetREKEY(SRC);
+                byte[] encrypt = !useRekeys ? KeyStore.Inst.GetENCRYPTS(SRC)[keyIndex] : KeyStore.Inst.GetPreKEY(SRC);
 
                 byte[] encryptedShard = MetadataShards[i];
 
