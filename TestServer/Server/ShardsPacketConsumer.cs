@@ -205,7 +205,7 @@ namespace TestServer.Server
 
                                             // servers get preKEY[] for device
                                             // servers SIGNS[] = ENCRYPTS[] = preKEY[]                
-                                            byte[] REKEY = KeyStore.Inst.GetPreKEY(deviceID);
+                                            byte[] preKEY = KeyStore.Inst.GetPreKEY(deviceID);
 
                                             // servers unwrap + store wSIGNS + wENCRPTS using stored NONCE for device.
                                             List<byte[]> ENCRYPTS = new List<byte[]>();
