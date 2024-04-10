@@ -97,11 +97,36 @@ namespace TestServer.Server
                                             //servers receive + validate the invite transaction
 
                                             InviteRequest inviteObj = JsonConvert.DeserializeObject<InviteRequest>(shardsJsonString);
-
+                                            
                                             // servers store inviteObj.SIGNS + inviteObj.ENCRYPTS for device.id = inviteObj.id         
                                             byte[] inviteID = CryptoUtils.CBORBinaryStringToBytes(inviteObj.inviteID);
-                                            KeyStore.Inst.StoreENCRYPTS(inviteID, inviteObj.inviteENCRYPTS);
-                                            KeyStore.Inst.StoreSIGNS(inviteID, inviteObj.inviteSIGNS);
+
+                                            byte[] ownerID = shardsPacket.SRC;
+
+                                            // decrypt invite.ENCRYPTS + invite.SIGNS
+                                            List<byte[]> inviteENCRYPTS = new List<byte[]>();
+                                            List<byte[]> inviteSIGNS = new List<byte[]>();
+                                            // 1st element at posistion 0 in not encrypted
+                                            inviteENCRYPTS.Add(CryptoUtils.CBORBinaryStringToBytes(inviteObj.inviteENCRYPTS[0]));
+                                            inviteSIGNS.Add(CryptoUtils.CBORBinaryStringToBytes(inviteObj.inviteSIGNS[0]));
+                                            for (int n = 1; n <= Servers.NUM_SERVERS; n++) 
+                                            {
+                                                byte[] decryptedInviteENCRYPT = CryptoUtils.Decrypt(
+                                                    CryptoUtils.CBORBinaryStringToBytes(inviteObj.inviteENCRYPTS[n]),
+                                                    KeyStore.Inst.GetENCRYPTS(ownerID)[n],
+                                                    ownerID);
+
+                                                inviteENCRYPTS.Add(decryptedInviteENCRYPT);
+
+                                                byte[] decryptedInviteSIGN = CryptoUtils.Decrypt(
+                                                    CryptoUtils.CBORBinaryStringToBytes(inviteObj.inviteSIGNS[n]),
+                                                    KeyStore.Inst.GetENCRYPTS(ownerID)[n],
+                                                    ownerID);
+
+                                                inviteSIGNS.Add(decryptedInviteSIGN);
+                                            }
+                                            KeyStore.Inst.StoreENCRYPTS(inviteID, inviteENCRYPTS);
+                                            KeyStore.Inst.StoreSIGNS(inviteID, inviteSIGNS);
 
                                             // response is just OK, but any response data must be encrypted + signed using owner.KEYS
                                             var cborInviteResponse = CBORObject.NewMap().Add("INVITE", "SUCCESS");
