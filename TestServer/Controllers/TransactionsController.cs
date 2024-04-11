@@ -58,12 +58,8 @@ namespace TestServer.Controllers
                 await Request.Body.CopyToAsync(ms);
                 requestBytes = ms.ToArray();
             }
-
-            CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
-
-            var jsonShardPacket = Encoding.UTF8.GetString(requestCBOR[0].GetByteString());
-
-            var shardsPacket = JsonConvert.DeserializeObject<ShardsPacket>(jsonShardPacket);
+                       
+            var shardsPacket = new ShardsPacket(requestBytes);
 
             if (_transactions.ContainsKey(shardsPacket.SessionId))
             {
@@ -107,18 +103,10 @@ namespace TestServer.Controllers
             try
             {
                 _logger.LogInformation("TransactionsController Invite");
-
-                CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
-
-                string jsonShardPacket = Encoding.UTF8.GetString(requestCBOR[0].GetByteString());
-
-                var shardsPacket = JsonConvert.DeserializeObject<ShardsPacket>(jsonShardPacket);
-                shardsPacket.Decrypt(false);
-
-                byte[] packetBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(shardsPacket));
-                var packetCBOR = CBORObject.NewArray().Add(packetBytes);
-
-                requestBytes = packetCBOR.EncodeToBytes();
+                             
+                var shardsPacket = new ShardsPacket(requestBytes);
+                shardsPacket.Decrypt(false);               
+                requestBytes = shardsPacket.EncodeToCBORBytes();
 
                 if (!_transactions.ContainsKey(shardsPacket.SessionId))
                 {
@@ -173,18 +161,10 @@ namespace TestServer.Controllers
             try
             {
                 _logger.LogInformation("TransactionsController Register");
-
-                CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
-
-                var jsonShardPacket = Encoding.UTF8.GetString(requestCBOR[0].GetByteString());
-
-                var shardsPacket = JsonConvert.DeserializeObject<ShardsPacket>(jsonShardPacket);
+                                
+                var shardsPacket = new ShardsPacket(requestBytes);
                 shardsPacket.Decrypt(false);
-
-                byte[] packetBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(shardsPacket));
-                var packetCBOR = CBORObject.NewArray().Add(packetBytes);
-
-                requestBytes = packetCBOR.EncodeToBytes();
+                requestBytes = shardsPacket.EncodeToCBORBytes();
 
                 if (!_transactions.ContainsKey(shardsPacket.SessionId))
                 {
@@ -240,18 +220,10 @@ namespace TestServer.Controllers
             {
                 _logger.LogInformation("TransactionsController Rekey");
                 Console.WriteLine("TransactionsController Rekey");
-
-                CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
-
-                var jsonShardPacket = Encoding.UTF8.GetString(requestCBOR[0].GetByteString());
-
-                var shardsPacket = JsonConvert.DeserializeObject<ShardsPacket>(jsonShardPacket);
-                shardsPacket.Decrypt(false);
-
-                byte[] packetBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(shardsPacket));
-                var packetCBOR = CBORObject.NewArray().Add(packetBytes);
-
-                requestBytes = packetCBOR.EncodeToBytes();
+                              
+                var shardsPacket = new ShardsPacket(requestBytes);
+                shardsPacket.Decrypt(false);               
+                requestBytes = shardsPacket.EncodeToCBORBytes();
 
                 if (!_transactions.ContainsKey(shardsPacket.SessionId))
                 {
@@ -310,18 +282,10 @@ namespace TestServer.Controllers
             {
                 _logger.LogInformation("TransactionsController Login");
                 Console.WriteLine("TransactionsController Login");
-
-                CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
-
-                var jsonShardPacket = Encoding.UTF8.GetString(requestCBOR[0].GetByteString());
-
-                var shardsPacket = JsonConvert.DeserializeObject<ShardsPacket>(jsonShardPacket);
-                shardsPacket.Decrypt(true);
-
-                byte[] packetBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(shardsPacket));
-                var packetCBOR = CBORObject.NewArray().Add(packetBytes);
-
-                requestBytes = packetCBOR.EncodeToBytes();
+                                
+                var shardsPacket = new ShardsPacket(requestBytes);
+                shardsPacket.Decrypt(true);               
+                requestBytes = shardsPacket.EncodeToCBORBytes();
 
                 if (!_transactions.ContainsKey(shardsPacket.SessionId))
                 {
@@ -377,18 +341,10 @@ namespace TestServer.Controllers
             {
                 _logger.LogInformation("TransactionsController Session");
                 Console.WriteLine("TransactionsController Session");
-
-                CBORObject requestCBOR = CBORObject.DecodeFromBytes(requestBytes);
-
-                var jsonShardPacket = Encoding.UTF8.GetString(requestCBOR[0].GetByteString());
-
-                var shardsPacket = JsonConvert.DeserializeObject<ShardsPacket>(jsonShardPacket);
+                               
+                var shardsPacket = new ShardsPacket(requestBytes);
                 shardsPacket.Decrypt(false);
-
-                byte[] packetBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(shardsPacket));
-                var packetCBOR = CBORObject.NewArray().Add(packetBytes);
-
-                requestBytes = packetCBOR.EncodeToBytes();
+                requestBytes = shardsPacket.EncodeToCBORBytes();
 
                 if (!_transactions.ContainsKey(shardsPacket.SessionId))
                 {
@@ -412,8 +368,7 @@ namespace TestServer.Controllers
                 ShardsPacket responseShardPacket = Servers.Inst.GetShardPacket(responseBytes);
 
                 byte[] shardPacketBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(responseShardPacket));
-
-                //return ReturnBytes(shardPacketBytes, HttpStatusCode.OK);
+                              
                 return Ok(responseShardPacket);
             }
             catch (Exception ex)
